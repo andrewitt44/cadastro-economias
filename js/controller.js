@@ -393,7 +393,7 @@ const Controller = {
             }
             
             let ptax = null;
-            let valorBRL = valorCancelado;
+            let valorBRL = valorCancelado; // Valor padrão para BRL
             
             if (moeda === 'USD') {
                 ptax = parseFloat(document.getElementById('canc_ptax').value);
@@ -401,9 +401,12 @@ const Controller = {
                     View.showError('Aguarde o carregamento da cotação PTAX');
                     return;
                 }
-                // Aplicar ágio e converter para BRL
-                const valorComAgio = valorCancelado * (1 + agio / 100);
-                valorBRL = valorComAgio * ptax;
+                // Pegar o valor BRL já calculado automaticamente
+                valorBRL = parseFloat(document.getElementById('canc_valorBRL').value);
+                if (!valorBRL || valorBRL <= 0) {
+                    View.showError('Erro ao calcular valor em BRL');
+                    return;
+                }
             }
             
             if (!arquivoInput.files || arquivoInput.files.length === 0) {

@@ -214,7 +214,16 @@ const Model = {
         };
         
         economias.forEach(e => {
-            const valorEconomia = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : e.valorEconomia;
+            // Garantir que valorEconomia está em BRL
+            let valorEconomia = 0;
+            
+            if (e.tipoEconomia === 'Cancelamento') {
+                // Para cancelamento, usar valorBRL se existir, senão valorCancelado
+                valorEconomia = parseFloat(e.valorBRL) || parseFloat(e.valorCancelado) || 0;
+            } else {
+                // Para correção, usar valorEconomiaBRL se existir, senão valorEconomia
+                valorEconomia = parseFloat(e.valorEconomiaBRL) || parseFloat(e.valorEconomia) || 0;
+            }
             
             // Total economizado não inclui reprovadas
             if (e.status !== 'Reprovado') {
@@ -317,7 +326,7 @@ const Model = {
             valorCorrigido: valorCorrigido,
             valorOriginalBRL: valorOriginalBRL,
             valorCorrigidoBRL: valorCorrigidoBRL,
-            valorEconomia: valorEconomia,
+            valorEconomia: valorEconomiaBRL,
             valorEconomiaBRL: valorEconomiaBRL,
             valorCancelado: 0,
             tipo: economiaData.tipo,

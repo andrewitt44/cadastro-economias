@@ -79,9 +79,8 @@ const View = {
             
             const canApprove = userRole === 'gestor' && economia.status === 'Pendente';
             
-            const valorExibir = economia.tipoEconomia === 'Cancelamento' ? 
-                (economia.valorBRL || economia.valorCancelado) : 
-                (economia.valorEconomiaBRL || economia.valorEconomia);
+            // Sempre usar valorEconomia que já está em BRL
+            const valorExibir = parseFloat(economia.valorEconomia) || 0;
             
             const moeda = economia.moeda || 'BRL';
             
@@ -459,9 +458,8 @@ const View = {
         document.getElementById('detalheAgio').textContent = economia.agio ? `${economia.agio}%` : '0%';
         document.getElementById('detalheTipoEconomia').textContent = economia.tipoEconomia || '-';
         
-        const valorBRLExibir = economia.tipoEconomia === 'Cancelamento' ? 
-            (economia.valorBRL || economia.valorCancelado) : 
-            (economia.valorEconomiaBRL || economia.valorEconomia);
+        // Sempre usar valorEconomia que já está em BRL
+        const valorBRLExibir = parseFloat(economia.valorEconomia) || 0;
         document.getElementById('detalheValorBRL').textContent = Model.formatCurrency(valorBRLExibir);
         
         // Seção Detalhes - Criar tabela de itens
