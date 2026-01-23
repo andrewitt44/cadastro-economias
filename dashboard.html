@@ -41,9 +41,10 @@
             <section class="actions-bar">
                 <button id="btnNovaEconomia" class="btn btn-primary">+ Nova Economia</button>
                 
-                <!-- Filtros (apenas para Gestor) -->
-                <div id="filtrosGestor" class="filters" style="display: none;">
-                    <select id="filtroUsuario" class="filter-select">
+                <!-- Filtros (visível para todos) -->
+                <div id="filtros" class="filters">
+                    <!-- Filtro de usuário (apenas para Gestor) -->
+                    <select id="filtroUsuario" class="filter-select" style="display: none;">
                         <option value="">Todos os usuários</option>
                     </select>
                     
@@ -60,60 +61,132 @@
                         <option value="Reprovado">Reprovado</option>
                     </select>
                     
-                    <input type="date" id="filtroDataInicio" class="filter-input">
-                    <input type="date" id="filtroDataFim" class="filter-input">
+                    <input type="date" id="filtroDataInicio" class="filter-input" placeholder="Data Início">
+                    <input type="date" id="filtroDataFim" class="filter-input" placeholder="Data Fim">
                     
                     <button id="btnAplicarFiltros" class="btn btn-secondary">Aplicar Filtros</button>
                     <button id="btnLimparFiltros" class="btn btn-secondary">Limpar</button>
                 </div>
             </section>
             
-            <!-- Lista de Economias -->
+            <!-- Tabela de Economias -->
             <section class="economias-list">
-                <h2>Economias Cadastradas</h2>
-                <div id="listaEconomias" class="cards-container">
-                    <!-- Economias serão renderizadas aqui -->
+                <div class="table-header">
+                    <h2>Economias Cadastradas</h2>
+                    <div class="table-info">
+                        <span id="tableInfo">Registros 1-25 de 858</span>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="tabelaEconomias" class="economias-table">
+                        <thead>
+                            <tr>
+                                <th>Operação</th>
+                                <th>Modal</th>
+                                <th>Fornecedor</th>
+                                <th>Auditor</th>
+                                <th>Valor</th>
+                                <th>Moeda</th>
+                                <th>Data</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaEconomias">
+                            <!-- Economias serão renderizadas aqui -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-pagination">
+                    <button class="btn btn-secondary btn-small" id="btnFirstPage">‹‹</button>
+                    <button class="btn btn-secondary btn-small" id="btnPrevPage">‹</button>
+                    <span class="pagination-info">Página <span id="currentPage">1</span> de <span id="totalPages">1</span></span>
+                    <button class="btn btn-secondary btn-small" id="btnNextPage">›</button>
+                    <button class="btn btn-secondary btn-small" id="btnLastPage">››</button>
                 </div>
             </section>
         </main>
     </div>
     
-    <!-- Modal de Nova/Editar Economia -->
-    <div id="modalEconomia" class="modal" style="display: none;">
-        <div class="modal-content">
+    <!-- Modal de Seleção de Tipo -->
+    <div id="modalTipoEconomia" class="modal" style="display: none;">
+        <div class="modal-content modal-small">
             <div class="modal-header">
-                <h2 id="modalTitle">Nova Economia</h2>
-                <button class="modal-close" id="closeModal">&times;</button>
+                <h2>Selecione o Tipo de Economia</h2>
+                <button class="modal-close" id="closeModalTipo">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="formEconomia">
+                <div class="tipo-selection">
+                    <button class="tipo-card" id="btnCancelamento">
+                        <div class="tipo-icon">🚫</div>
+                        <h3>Cancelamento</h3>
+                        <p>Registro de valores cancelados</p>
+                    </button>
+                    <button class="tipo-card" id="btnCorrecao">
+                        <div class="tipo-icon">✏️</div>
+                        <h3>Correção</h3>
+                        <p>Correção de valores originais</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cancelamento -->
+    <div id="modalCancelamento" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nova Economia - Cancelamento</h2>
+                <button class="modal-close" id="closeCancelamento">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formCancelamento">
                     <div class="form-group">
-                        <label for="codigoFornecedor">Código do Fornecedor *</label>
-                        <input type="text" id="codigoFornecedor" name="codigoFornecedor" 
+                        <label for="canc_codigoFornecedor">Código do Fornecedor *</label>
+                        <input type="text" id="canc_codigoFornecedor" name="codigoFornecedor" 
                                placeholder="Ex: FORN-001" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="valorOriginal">Valor Original (R$) *</label>
-                        <input type="number" id="valorOriginal" name="valorOriginal" 
-                               step="0.01" min="0" required>
+                        <label for="canc_data">Data *</label>
+                        <input type="date" id="canc_data" name="data" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="valorCorrigido">Valor Corrigido (R$) *</label>
-                        <input type="number" id="valorCorrigido" name="valorCorrigido" 
-                               step="0.01" min="0" required>
+                        <label for="canc_moeda">Moeda *</label>
+                        <select id="canc_moeda" name="moeda" required>
+                            <option value="BRL">BRL</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="canc_agioGroup" style="display: none;">
+                        <label for="canc_agio">Ágio (%)</label>
+                        <input type="number" id="canc_agio" name="agio" 
+                               step="0.01" min="0" value="0">
                     </div>
                     
                     <div class="form-group">
-                        <label for="valorEconomia">Valor da Economia (R$)</label>
-                        <input type="number" id="valorEconomia" name="valorEconomia" 
+                        <label for="canc_valorCancelado"><span id="canc_moedaLabel">Valor Cancelado (BRL)</span> *</label>
+                        <input type="number" id="canc_valorCancelado" name="valorCancelado" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group" id="canc_ptaxGroup" style="display: none;">
+                        <label for="canc_ptax">PTAX (USD)</label>
+                        <input type="number" id="canc_ptax" name="ptax" 
+                               step="0.0001" readonly>
+                    </div>
+                    
+                    <div class="form-group" id="canc_valorBRLGroup" style="display: none;">
+                        <label for="canc_valorBRL">Valor em BRL</label>
+                        <input type="number" id="canc_valorBRL" name="valorBRL" 
                                step="0.01" readonly>
                     </div>
                     
                     <div class="form-group">
-                        <label for="tipo">Tipo *</label>
-                        <select id="tipo" name="tipo" required>
+                        <label for="canc_tipo">Tipo *</label>
+                        <select id="canc_tipo" name="tipo" required>
                             <option value="">Selecione...</option>
                             <option value="BID">BID</option>
                             <option value="Cotação">Cotação</option>
@@ -121,19 +194,108 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="descricao">Descrição</label>
-                        <textarea id="descricao" name="descricao" rows="3"></textarea>
+                        <label for="canc_descricao">Descrição</label>
+                        <textarea id="canc_descricao" name="descricao" rows="3" 
+                                  placeholder="Descreva o motivo do cancelamento..."></textarea>
                     </div>
                     
                     <div class="form-group">
-                        <label for="arquivo">Arquivos de Prova (PDF, PNG, JPG) *</label>
-                        <input type="file" id="arquivo" name="arquivo" 
+                        <label for="canc_arquivo">Arquivos de Prova (PDF, PNG, JPG) *</label>
+                        <input type="file" id="canc_arquivo" name="arquivo" 
                                accept=".pdf,.png,.jpg,.jpeg" multiple required>
-                        <small class="form-help">Tamanho máximo: 5MB por arquivo. Você pode selecionar múltiplos arquivos.</small>
+                        <small class="form-help">Tamanho máximo: 5MB por arquivo.</small>
                     </div>
                     
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" id="cancelModal">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" id="cancelCancelamento">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Correção -->
+    <div id="modalCorrecao" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nova Economia - Correção</h2>
+                <button class="modal-close" id="closeCorrecao">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formCorrecao">
+                    <div class="form-group">
+                        <label for="corr_codigoFornecedor">Código do Fornecedor *</label>
+                        <input type="text" id="corr_codigoFornecedor" name="codigoFornecedor" 
+                               placeholder="Ex: FORN-001" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_data">Data *</label>
+                        <input type="date" id="corr_data" name="data" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_moeda">Moeda *</label>
+                        <select id="corr_moeda" name="moeda" required>
+                            <option value="BRL">BRL</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="corr_agioGroup" style="display: none;">
+                        <label for="corr_agio">Ágio (%)</label>
+                        <input type="number" id="corr_agio" name="agio" 
+                               step="0.01" min="0" value="0">
+                    </div>
+                    
+                    <div class="form-group" id="corr_ptaxGroup" style="display: none;">
+                        <label for="corr_ptax">PTAX (USD)</label>
+                        <input type="number" id="corr_ptax" name="ptax" 
+                               step="0.0001" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_valorOriginal"><span id="corr_moedaLabelOriginal">Valor Original (BRL)</span> *</label>
+                        <input type="number" id="corr_valorOriginal" name="valorOriginal" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_valorCorrigido"><span id="corr_moedaLabelCorrigido">Valor Corrigido (BRL)</span> *</label>
+                        <input type="number" id="corr_valorCorrigido" name="valorCorrigido" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_valorEconomia"><span id="corr_moedaLabelEconomia">Valor da Economia (BRL)</span></label>
+                        <input type="number" id="corr_valorEconomia" name="valorEconomia" 
+                               step="0.01" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_tipo">Tipo *</label>
+                        <select id="corr_tipo" name="tipo" required>
+                            <option value="">Selecione...</option>
+                            <option value="BID">BID</option>
+                            <option value="Cotação">Cotação</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_descricao">Descrição</label>
+                        <textarea id="corr_descricao" name="descricao" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="corr_arquivo">Arquivos de Prova (PDF, PNG, JPG) *</label>
+                        <input type="file" id="corr_arquivo" name="arquivo" 
+                               accept=".pdf,.png,.jpg,.jpeg" multiple required>
+                        <small class="form-help">Tamanho máximo: 5MB por arquivo.</small>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelCorrecao">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Salvar</button>
                     </div>
                 </form>

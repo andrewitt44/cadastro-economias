@@ -259,6 +259,7 @@ body {
     border-radius: 12px;
     box-shadow: var(--shadow);
     border-left: 4px solid var(--primary-color);
+    text-align: center;
 }
 
 .indicator-card.success {
@@ -273,7 +274,7 @@ body {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
 .indicator-value {
@@ -298,6 +299,7 @@ body {
 .filters {
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-evenly;
     gap: 12px;
     flex: 1;
 }
@@ -537,3 +539,433 @@ body {
 .mb-16 {
     margin-bottom: 16px;
 }
+
+/* Modal Pequeno (Seleção de Tipo) */
+.modal-small .modal-content {
+    max-width: 500px;
+}
+
+.tipo-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.tipo-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    padding: 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.tipo-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.tipo-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.tipo-card h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.tipo-card p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Tabela de Economias (Estilo WEG) */
+.economias-list {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.table-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.table-container {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.economias-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.economias-table thead {
+    background-color: #5B9BD5;
+    color: white;
+}
+
+.economias-table th {
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.economias-table th:last-child {
+    border-right: none;
+}
+
+.economias-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s;
+}
+
+.economias-table tbody tr:hover {
+    background-color: #f0f7ff;
+}
+
+.economias-table tbody tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+.economias-table tbody tr:nth-child(even):hover {
+    background-color: #f0f7ff;
+}
+
+.economias-table td {
+    padding: 10px 8px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.economias-table td.clickable {
+    color: var(--primary-color);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.economias-table td.clickable:hover {
+    color: var(--primary-hover);
+}
+
+.table-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+}
+
+.pagination-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Status badges na tabela */
+.badge-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-aprovado {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-pendente {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.badge-reprovado {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.badge-andamento {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-concluido {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+/* Página de Detalhes */
+.breadcrumb {
+    margin-bottom: 24px;
+}
+
+.breadcrumb-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.breadcrumb-link:hover {
+    text-decoration: underline;
+}
+
+.detalhes-container {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.detalhes-header {
+    padding: 24px;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    background-color: #f8fafc;
+}
+
+.detalhes-header h2 {
+    font-size: 24px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.detalhe-codigo {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.detalhes-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.detail-section {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+}
+
+.detail-section-header {
+    padding: 16px 24px;
+    background-color: #5B9BD5;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.detail-section-header:hover {
+    background-color: #4A8BC2;
+}
+
+.detail-section-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.toggle-icon {
+    font-size: 14px;
+    transition: transform 0.3s;
+}
+
+.detail-section-body {
+    padding: 24px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-item label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.detail-item span {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.detail-table {
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.detail-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.detail-table thead {
+    background-color: #f1f5f9;
+}
+
+.detail-table th {
+    padding: 10px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.detail-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.detail-summary {
+    background-color: #f8fafc;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.summary-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 20px;
+    padding: 8px 0;
+}
+
+.summary-row.total {
+    border-top: 2px solid var(--border-color);
+    padding-top: 12px;
+    margin-top: 8px;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.summary-label {
+    color: var(--text-secondary);
+}
+
+.summary-value {
+    text-align: right;
+    min-width: 120px;
+}
+
+.detail-actions-bottom {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+}
+
+.arquivos-lista {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.arquivo-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #f1f5f9;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.arquivo-item:hover {
+    background-color: #e2e8f0;
+}
+
+/* Botão de Ação na Tabela */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 18px;
+    color: var(--primary-color);
+    transition: color 0.2s;
+}
+
+.btn-icon:hover {
+    color: var(--primary-hover);
+}
+
+/* Responsive para Tabela */
+@media (max-width: 1200px) {
+    .economias-table {
+        font-size: 12px;
+    }
+    
+    .economias-table th,
+    .economias-table td {
+        padding: 8px 6px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table-container {
+        overflow-x: scroll;
+    }
+    
+    .economias-table {
+        min-width: 1200px;
+    }
+    
+    .tipo-selection {
+        grid-template-columns: 1fr;
+    }
+    
+    .detalhes-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+

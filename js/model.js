@@ -214,21 +214,125 @@ const Model = {
         };
         
         economias.forEach(e => {
+            const valorEconomia = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : e.valorEconomia;
+            
             // Total economizado não inclui reprovadas
             if (e.status !== 'Reprovado') {
-                totals.totalEconomizado += e.valorEconomia;
+                totals.totalEconomizado += valorEconomia;
             }
             
             if (e.status === 'Aprovado') {
-                totals.totalAprovado += e.valorEconomia;
+                totals.totalAprovado += valorEconomia;
             } else if (e.status === 'Pendente') {
-                totals.totalPendente += e.valorEconomia;
+                totals.totalPendente += valorEconomia;
             } else if (e.status === 'Reprovado') {
-                totals.totalReprovado += e.valorEconomia;
+                totals.totalReprovado += valorEconomia;
             }
         });
         
         return totals;
+    },
+    
+    /**
+     * Salvar nova economia de Cancelamento
+     */
+    saveEconomiaCancelamento(economiaData) {
+        const economias = this.getEconomias();
+        const currentSession = this.getCurrentSession();
+        
+        if (!currentSession) {
+            return { success: false, message: 'Usuário não autenticado' };
+        }
+        
+        const valorCancelado = parseFloat(economiaData.valorCancelado);
+        const valorBRL = parseFloat(economiaData.valorBRL);
+        
+        if (valorCancelado <= 0) {
+            return { success: false, message: 'Valor cancelado deve ser maior que zero' };
+        }
+        
+        const novaEconomia = {
+            id: this.generateId(),
+            userId: currentSession.id,
+            userName: currentSession.name,
+            tipoEconomia: 'Cancelamento',
+            codigoFornecedor: economiaData.codigoFornecedor || '',
+            data: economiaData.data,
+            moeda: economiaData.moeda || 'BRL',
+            ptax: economiaData.ptax || null,
+            agio: economiaData.agio || 0,
+            valorCancelado: valorCancelado,
+            valorBRL: valorBRL,
+            valorOriginal: 0,
+            valorCorrigido: 0,
+            valorEconomia: valorBRL,
+            tipo: economiaData.tipo,
+            descricao: economiaData.descricao || '',
+            arquivos: economiaData.arquivos || [],
+            status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
+            dataCriacao: new Date().toISOString(),
+            dataAprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,
+            observacoes: ''
+        };
+        
+        economias.push(novaEconomia);
+        localStorage.setItem('economias', JSON.stringify(economias));
+        
+        return { success: true, economia: novaEconomia };
+    },
+    
+    /**
+     * Salvar nova economia de Correção
+     */
+    saveEconomiaCorrecao(economiaData) {
+        const economias = this.getEconomias();
+        const currentSession = this.getCurrentSession();
+        
+        if (!currentSession) {
+            return { success: false, message: 'Usuário não autenticado' };
+        }
+        
+        const valorOriginal = parseFloat(economiaData.valorOriginal);
+        const valorCorrigido = parseFloat(economiaData.valorCorrigido);
+        const valorOriginalBRL = parseFloat(economiaData.valorOriginalBRL);
+        const valorCorrigidoBRL = parseFloat(economiaData.valorCorrigidoBRL);
+        const valorEconomia = valorOriginal - valorCorrigido;
+        const valorEconomiaBRL = valorOriginalBRL - valorCorrigidoBRL;
+        
+        if (valorEconomia < 0) {
+            return { success: false, message: 'Valor da economia não pode ser negativo' };
+        }
+        
+        const novaEconomia = {
+            id: this.generateId(),
+            userId: currentSession.id,
+            userName: currentSession.name,
+            tipoEconomia: 'Correção',
+            codigoFornecedor: economiaData.codigoFornecedor || '',
+            data: economiaData.data,
+            moeda: economiaData.moeda || 'BRL',
+            ptax: economiaData.ptax || null,
+            agio: economiaData.agio || 0,
+            valorOriginal: valorOriginal,
+            valorCorrigido: valorCorrigido,
+            valorOriginalBRL: valorOriginalBRL,
+            valorCorrigidoBRL: valorCorrigidoBRL,
+            valorEconomia: valorEconomia,
+            valorEconomiaBRL: valorEconomiaBRL,
+            valorCancelado: 0,
+            tipo: economiaData.tipo,
+            descricao: economiaData.descricao || '',
+            arquivos: economiaData.arquivos || [],
+            status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
+            dataCriacao: new Date().toISOString(),
+            dataAprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,
+            observacoes: ''
+        };
+        
+        economias.push(novaEconomia);
+        localStorage.setItem('economias', JSON.stringify(economias));
+        
+        return { success: true, economia: novaEconomia };
     },
     
     /**

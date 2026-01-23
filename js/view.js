@@ -4,6 +4,10 @@
  */
 
 const View = {
+    currentPage: 1,
+    itemsPerPage: 35,
+    allEconomias: [],
+    
     /**
      * Renderizar informações do usuário no header
      */
@@ -36,19 +40,24 @@ const View = {
     },
     
     /**
-     * Renderizar lista de economias
+     * Renderizar lista de economias em formato de tabela
      */
     renderEconomias(economias, userRole) {
         const container = document.getElementById('listaEconomias');
         
         if (!container) return;
         
+        // Armazenar todas as economias
+        this.allEconomias = economias;
+        
         if (economias.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <h3>Nenhuma economia cadastrada</h3>
-                    <p>Clique em "Nova Economia" para começar</p>
-                </div>
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 40px;">
+                        <h3>Nenhuma economia cadastrada</h3>
+                        <p>Clique em "Nova Economia" para começar</p>
+                    </td>
+                </tr>
             `;
             return;
         }
@@ -56,60 +65,86 @@ const View = {
         // Ordenar por data de criação (mais recentes primeiro)
         economias.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
         
-        container.innerHTML = economias.map(economia => {
-            const statusClass = economia.status === 'Aprovado' ? 'status-aprovado' :
-                              economia.status === 'Pendente' ? 'status-pendente' :
-                              'status-reprovado';
+        // Calcular paginação
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        const endIndex = startIndex + this.itemsPerPage;
+        const paginatedEconomias = economias.slice(startIndex, endIndex);
+        
+        container.innerHTML = paginatedEconomias.map(economia => {
+            const statusClass = economia.status === 'Aprovado' ? 'badge-aprovado' :
+                              economia.status === 'Pendente' ? 'badge-pendente' :
+                              economia.status === 'Em Andamento' ? 'badge-andamento' :
+                              economia.status === 'Concluído' ? 'badge-concluido' :
+                              'badge-reprovado';
             
             const canApprove = userRole === 'gestor' && economia.status === 'Pendente';
             
-            // Gerar botões para cada arquivo
-            const arquivos = economia.arquivos || [];
-            const arquivosButtons = arquivos.map((arquivo, index) => 
-                `<button class="btn btn-secondary btn-small" onclick="Controller.viewFile('${economia.id}', ${index})">
-                    📎 ${arquivo.nome}
-                </button>`
-            ).join('');
+            const valorExibir = economia.tipoEconomia === 'Cancelamento' ? 
+                (economia.valorBRL || economia.valorCancelado) : 
+                (economia.valorEconomiaBRL || economia.valorEconomia);
+            
+            const moeda = economia.moeda || 'BRL';
             
             return `
-                <div class="economia-card" data-id="${economia.id}">
-                    <div class="economia-header">
-                        <span class="economia-tipo">${economia.tipo}</span>
-                        <span class="economia-status ${statusClass}">${economia.status}</span>
-                    </div>
-                    
-                    <div class="economia-valores">
-                        <p><strong>Valor Original:</strong> ${Model.formatCurrency(economia.valorOriginal)}</p>
-                        <p><strong>Valor Corrigido:</strong> ${Model.formatCurrency(economia.valorCorrigido)}</p>
-                        <div class="valor-economia">${Model.formatCurrency(economia.valorEconomia)}</div>
-                    </div>
-                    
-                    ${economia.descricao ? `<p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">${economia.descricao}</p>` : ''}
-                    
-                    <div class="economia-info">
-                        ${economia.codigoFornecedor ? `<p><strong>Fornecedor:</strong> ${economia.codigoFornecedor}</p>` : ''}
-                        <p><strong>Cadastrado por:</strong> ${economia.userName}</p>
-                        <p><strong>Data:</strong> ${Model.formatDate(economia.dataCriacao)}</p>
-                        <p><strong>Arquivos anexados:</strong> ${arquivos.length}</p>
-                        ${economia.observacoes ? `<p><strong>Observações:</strong> ${economia.observacoes}</p>` : ''}
-                    </div>
-                    
-                    <div class="economia-actions">
-                        ${arquivosButtons}
-                        ${canApprove ? `<button class="btn btn-primary btn-small" onclick="Controller.openApprovalModal('${economia.id}')">Aprovar/Reprovar</button>` : ''}
-                    </div>
-                </div>
+                <tr>
+                    <td>${economia.tipoEconomia || 'Correção'}</td>
+                    <td>${economia.tipo || '-'}</td>
+                    <td>${economia.codigoFornecedor || '-'}</td>
+                    <td>${economia.userName || '-'}</td>
+                    <td>${Model.formatCurrency(valorExibir)}</td>
+                    <td>${moeda}</td>
+                    <td>${Model.formatDate(economia.data || economia.dataCriacao)}</td>
+                    <td><span class="badge-status ${statusClass}">${economia.status}</span></td>
+                    <td>
+                        <button class="btn-icon" onclick="window.location.href='detalhes.html?id=${economia.id}'" title="Ver detalhes">
+                            👁️
+                        </button>
+                        ${canApprove ? `<button class="btn-icon" onclick="Controller.openApprovalModal('${economia.id}')" title="Aprovar/Reprovar">✓</button>` : ''}
+                    </td>
+                </tr>
             `;
         }).join('');
+    },
+    
+    /**
+     * Configurar paginação
+     */
+    setupPagination(totalItems) {
+        const totalPages = Math.ceil(totalItems / this.itemsPerPage);
+        const currentPageSpan = document.getElementById('currentPage');
+        const totalPagesSpan = document.getElementById('totalPages');
+        const tableInfo = document.getElementById('tableInfo');
+        
+        if (currentPageSpan) currentPageSpan.textContent = this.currentPage;
+        if (totalPagesSpan) totalPagesSpan.textContent = totalPages;
+        
+        const startItem = (this.currentPage - 1) * this.itemsPerPage + 1;
+        const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
+        
+        if (tableInfo) {
+            tableInfo.textContent = `Registros ${startItem}-${endItem} de ${totalItems}`;
+        }
+        
+        // Habilitar/desabilitar botões
+        const btnFirstPage = document.getElementById('btnFirstPage');
+        const btnPrevPage = document.getElementById('btnPrevPage');
+        const btnNextPage = document.getElementById('btnNextPage');
+        const btnLastPage = document.getElementById('btnLastPage');
+        
+        if (btnFirstPage) btnFirstPage.disabled = this.currentPage === 1;
+        if (btnPrevPage) btnPrevPage.disabled = this.currentPage === 1;
+        if (btnNextPage) btnNextPage.disabled = this.currentPage === totalPages || totalPages === 0;
+        if (btnLastPage) btnLastPage.disabled = this.currentPage === totalPages || totalPages === 0;
     },
     
     /**
      * Mostrar filtros de gestor
      */
     showGestorFilters() {
-        const filtrosGestor = document.getElementById('filtrosGestor');
-        if (filtrosGestor) {
-            filtrosGestor.style.display = 'flex';
+        // Mostrar filtro de usuários apenas para gestor
+        const filtroUsuario = document.getElementById('filtroUsuario');
+        if (filtroUsuario) {
+            filtroUsuario.style.display = 'block';
             this.populateUserFilter();
         }
     },
@@ -118,9 +153,30 @@ const View = {
      * Ocultar filtros de gestor
      */
     hideGestorFilters() {
-        const filtrosGestor = document.getElementById('filtrosGestor');
-        if (filtrosGestor) {
-            filtrosGestor.style.display = 'none';
+        // Ocultar apenas o filtro de usuários para auditores
+        const filtroUsuario = document.getElementById('filtroUsuario');
+        if (filtroUsuario) {
+            filtroUsuario.style.display = 'none';
+        }
+    },
+    
+    /**
+     * Mostrar botão Nova Economia
+     */
+    showNovaEconomiaButton() {
+        const btnNovaEconomia = document.getElementById('btnNovaEconomia');
+        if (btnNovaEconomia) {
+            btnNovaEconomia.style.display = 'inline-flex';
+        }
+    },
+    
+    /**
+     * Ocultar botão Nova Economia
+     */
+    hideNovaEconomiaButton() {
+        const btnNovaEconomia = document.getElementById('btnNovaEconomia');
+        if (btnNovaEconomia) {
+            btnNovaEconomia.style.display = 'none';
         }
     },
     
@@ -297,5 +353,250 @@ const View = {
         document.getElementById('filtroStatus').value = '';
         document.getElementById('filtroDataInicio').value = '';
         document.getElementById('filtroDataFim').value = '';
+    },
+    
+    /**
+     * Abrir modal de seleção de tipo
+     */
+    openTipoModal() {
+        const modal = document.getElementById('modalTipoEconomia');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    },
+    
+    /**
+     * Fechar modal de seleção de tipo
+     */
+    closeTipoModal() {
+        const modal = document.getElementById('modalTipoEconomia');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+    
+    /**
+     * Abrir modal de cancelamento
+     */
+    openCancelamentoModal() {
+        const modal = document.getElementById('modalCancelamento');
+        const form = document.getElementById('formCancelamento');
+        
+        if (modal && form) {
+            form.reset();
+            modal.style.display = 'flex';
+        }
+    },
+    
+    /**
+     * Fechar modal de cancelamento
+     */
+    closeCancelamentoModal() {
+        const modal = document.getElementById('modalCancelamento');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+    
+    /**
+     * Abrir modal de correção
+     */
+    openCorrecaoModal() {
+        const modal = document.getElementById('modalCorrecao');
+        const form = document.getElementById('formCorrecao');
+        
+        if (modal && form) {
+            form.reset();
+            modal.style.display = 'flex';
+        }
+    },
+    
+    /**
+     * Fechar modal de correção
+     */
+    closeCorrecaoModal() {
+        const modal = document.getElementById('modalCorrecao');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    },
+    
+    /**
+     * Calcular e atualizar valor da economia no formulário de correção
+     */
+    updateEconomiaValueCorrecao() {
+        const valorOriginal = parseFloat(document.getElementById('corr_valorOriginal').value) || 0;
+        const valorCorrigido = parseFloat(document.getElementById('corr_valorCorrigido').value) || 0;
+        const valorEconomia = valorOriginal - valorCorrigido;
+        
+        document.getElementById('corr_valorEconomia').value = valorEconomia.toFixed(2);
+    },
+    
+    /**
+     * Renderizar detalhes de uma economia
+     */
+    renderEconomiaDetails(economia, userRole) {
+        // Atualizar título e código
+        document.getElementById('detalheTitulo').textContent = 'Detalhes da Economia';
+        
+        // Botões de ação (apenas para gestor)
+        const actionsDiv = document.getElementById('detalheActions');
+        if (userRole === 'gestor' && economia.status === 'Pendente') {
+            actionsDiv.innerHTML = `
+                <button class="btn btn-success" onclick="Controller.handleApproval('Aprovado')">Aprovar</button>
+                <button class="btn btn-danger" onclick="Controller.handleApproval('Reprovado')">Reprovar</button>
+            `;
+        } else {
+            actionsDiv.innerHTML = '';
+        }
+        
+        // Seção Cotação
+        document.getElementById('detalheFornecedor').textContent = economia.codigoFornecedor || '-';
+        document.getElementById('detalheAuditor').textContent = economia.userName || '-';
+        document.getElementById('detalheData').textContent = Model.formatDate(economia.data || economia.dataCriacao);
+        document.getElementById('detalheMoeda').textContent = economia.moeda || 'BRL';
+        document.getElementById('detalhePTAX').textContent = economia.ptax ? economia.ptax.toFixed(4) : '-';
+        document.getElementById('detalheAgio').textContent = economia.agio ? `${economia.agio}%` : '0%';
+        document.getElementById('detalheTipoEconomia').textContent = economia.tipoEconomia || '-';
+        
+        const valorBRLExibir = economia.tipoEconomia === 'Cancelamento' ? 
+            (economia.valorBRL || economia.valorCancelado) : 
+            (economia.valorEconomiaBRL || economia.valorEconomia);
+        document.getElementById('detalheValorBRL').textContent = Model.formatCurrency(valorBRLExibir);
+        
+        // Seção Detalhes - Criar tabela de itens
+        const detalheItens = document.getElementById('detalheItens');
+        if (economia.tipoEconomia === 'Cancelamento') {
+            const moeda = economia.moeda || 'BRL';
+            const ptax = economia.ptax || 1;
+            const valor = economia.valorCancelado;
+            const valorBRL = economia.valorBRL || valor;
+            
+            detalheItens.innerHTML = `
+                <tr>
+                    <td>Valor Cancelado</td>
+                    <td>${valor.toFixed(2)}</td>
+                    <td>0.00</td>
+                    <td>${moeda}</td>
+                    <td>${ptax.toFixed(4)}</td>
+                    <td>${valor.toFixed(2)}</td>
+                    <td>${Model.formatCurrency(valorBRL)}</td>
+                </tr>
+            `;
+            document.getElementById('totalBRL').textContent = Model.formatCurrency(valorBRL);
+            document.getElementById('totalUSD').textContent = moeda === 'USD' ? valor.toFixed(2) : '0.00';
+        } else {
+            const moeda = economia.moeda || 'BRL';
+            const ptax = economia.ptax || 1;
+            const valorOriginal = economia.valorOriginal;
+            const valorCorrigido = economia.valorCorrigido;
+            const valorEconomia = economia.valorEconomia;
+            const valorOriginalBRL = economia.valorOriginalBRL || valorOriginal;
+            const valorCorrigidoBRL = economia.valorCorrigidoBRL || valorCorrigido;
+            const valorEconomiaBRL = economia.valorEconomiaBRL || valorEconomia;
+            
+            detalheItens.innerHTML = `
+                <tr>
+                    <td>Valor Original</td>
+                    <td>${valorOriginal.toFixed(2)}</td>
+                    <td>0.00</td>
+                    <td>${moeda}</td>
+                    <td>${ptax.toFixed(4)}</td>
+                    <td>${valorOriginal.toFixed(2)}</td>
+                    <td>${Model.formatCurrency(valorOriginalBRL)}</td>
+                </tr>
+                <tr>
+                    <td>Valor Corrigido</td>
+                    <td>${valorCorrigido.toFixed(2)}</td>
+                    <td>0.00</td>
+                    <td>${moeda}</td>
+                    <td>${ptax.toFixed(4)}</td>
+                    <td>${valorCorrigido.toFixed(2)}</td>
+                    <td>${Model.formatCurrency(valorCorrigidoBRL)}</td>
+                </tr>
+                <tr style="background-color: #d1fae5;">
+                    <td><strong>Economia</strong></td>
+                    <td><strong>${valorEconomia.toFixed(2)}</strong></td>
+                    <td>0.00</td>
+                    <td>${moeda}</td>
+                    <td>${ptax.toFixed(4)}</td>
+                    <td><strong>${valorEconomia.toFixed(2)}</strong></td>
+                    <td><strong>${Model.formatCurrency(valorEconomiaBRL)}</strong></td>
+                </tr>
+            `;
+            document.getElementById('totalBRL').textContent = Model.formatCurrency(valorEconomiaBRL);
+            document.getElementById('totalUSD').textContent = moeda === 'USD' ? valorEconomia.toFixed(2) : '0.00';
+        }
+        
+        // Descrição
+        const descricaoSection = document.getElementById('descricaoSection');
+        const detalheDescricao = document.getElementById('detalheDescricao');
+        
+        if (economia.descricao && economia.descricao.trim() !== '') {
+            if (descricaoSection) descricaoSection.style.display = 'block';
+            if (detalheDescricao) detalheDescricao.textContent = economia.descricao;
+        } else {
+            if (descricaoSection) descricaoSection.style.display = 'none';
+        }
+        
+        // Observações
+        if (economia.observacoes && economia.observacoes.trim() !== '') {
+            document.getElementById('observacoesSection').style.display = 'block';
+            document.getElementById('detalheObservacoes').textContent = economia.observacoes;
+        } else {
+            document.getElementById('observacoesSection').style.display = 'none';
+        }
+        
+        // Arquivos Anexados
+        const arquivosDiv = document.getElementById('detalheArquivos');
+        const arquivos = economia.arquivos || [];
+        
+        if (arquivos.length > 0) {
+            arquivosDiv.innerHTML = arquivos.map((arquivo, index) => `
+                <a href="#" class="arquivo-item" onclick="Controller.viewFile('${economia.id}', ${index}); return false;">
+                    📎 ${arquivo.nome}
+                </a>
+            `).join('');
+        } else {
+            arquivosDiv.innerHTML = '<p style="color: var(--text-secondary);">Nenhum arquivo anexado</p>';
+        }
+    },
+    
+    /**
+     * Paginação - Ir para página
+     */
+    goToPage(page) {
+        this.currentPage = page;
+        Controller.loadEconomias();
+    },
+    
+    /**
+     * Paginação - Página anterior
+     */
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+            Controller.loadEconomias();
+        }
+    },
+    
+    /**
+     * Paginação - Próxima página
+     */
+    nextPage() {
+        const totalPages = Math.ceil(this.allEconomias.length / this.itemsPerPage);
+        if (this.currentPage < totalPages) {
+            this.currentPage++;
+            Controller.loadEconomias();
+        }
+    },
+    
+    /**
+     * Paginação - Última página
+     */
+    goToLastPage() {
+        const totalPages = Math.ceil(this.allEconomias.length / this.itemsPerPage);
+        this.currentPage = totalPages;
+        Controller.loadEconomias();
     }
 };

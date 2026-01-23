@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes da Economia - Sistema de Economias</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Sistema de Economias</h1>
+                <div class="user-info">
+                    <span id="userDisplay"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="dashboard.html" class="breadcrumb-link">← Voltar para Dashboard</a>
+            </div>
+
+            <!-- Detalhes da Economia -->
+            <section class="detalhes-container">
+                <div class="detalhes-header">
+                    <div>
+                        <h2 id="detalheTitulo">Detalhes da Economia</h2>
+                    </div>
+                    <div class="detalhes-actions" id="detalheActions">
+                        <!-- Botões de ação serão inseridos aqui -->
+                    </div>
+                </div>
+
+                <!-- Seção: Cotação -->
+                <div class="detail-section">
+                    <div class="detail-section-header" onclick="toggleSection('cotacao')">
+                        <h3>Cotação</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="detail-section-body" id="section-cotacao">
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <label>Fornecedor</label>
+                                <span id="detalheFornecedor">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Auditor</label>
+                                <span id="detalheAuditor">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Data</label>
+                                <span id="detalheData">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Moeda</label>
+                                <span id="detalheMoeda">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>PTAX</label>
+                                <span id="detalhePTAX">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Ágio</label>
+                                <span id="detalheAgio">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Valor (BRL)</label>
+                                <span id="detalheValorBRL">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Tipo de Economia</label>
+                                <span id="detalheTipoEconomia">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Detalhes -->
+                <div class="detail-section">
+                    <div class="detail-section-header" onclick="toggleSection('detalhes')">
+                        <h3>Detalhes</h3>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="detail-section-body" id="section-detalhes">
+                        <div class="detail-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Descrição</th>
+                                        <th>Valor</th>
+                                        <th>Mín</th>
+                                        <th>Moeda</th>
+                                        <th>PTAX</th>
+                                        <th>Total</th>
+                                        <th>Total (BRL)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detalheItens">
+                                    <!-- Itens serão inseridos aqui -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="detail-summary">
+                            <div class="summary-row">
+                                <span class="summary-label">Moeda</span>
+                                <span class="summary-value">USD</span>
+                                <span class="summary-value">BRL</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span class="summary-label">Total</span>
+                                <span class="summary-value" id="totalUSD">0.00</span>
+                                <span class="summary-value" id="totalBRL">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Descrição -->
+                <div class="detail-section" id="descricaoSection" style="display: none;">
+                    <div class="detail-section-header">
+                        <h3>Descrição</h3>
+                    </div>
+                    <div class="detail-section-body">
+                        <p id="detalheDescricao">-</p>
+                    </div>
+                </div>
+
+                <!-- Seção: Observações -->
+                <div class="detail-section" id="observacoesSection" style="display: none;">
+                    <div class="detail-section-header">
+                        <h3>Observações</h3>
+                    </div>
+                    <div class="detail-section-body">
+                        <p id="detalheObservacoes">-</p>
+                    </div>
+                </div>
+
+                <!-- Seção: Arquivos Anexados -->
+                <div class="detail-section">
+                    <div class="detail-section-header">
+                        <h3>Arquivos Anexados</h3>
+                    </div>
+                    <div class="detail-section-body">
+                        <div id="detalheArquivos" class="arquivos-lista">
+                            <!-- Arquivos serão inseridos aqui -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/model.js"></script>
+    <script src="js/view.js"></script>
+    <script src="js/controller.js"></script>
+    <script>
+        // Verificar se usuário está logado
+        const currentUser = Controller.getCurrentUser();
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        } else {
+            // Renderizar informações do usuário
+            View.renderUserInfo(currentUser);
+            
+            // Obter ID da economia da URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const economiaId = urlParams.get('id');
+            
+            if (!economiaId) {
+                alert('Economia não encontrada');
+                window.location.href = 'dashboard.html';
+            } else {
+                Controller.loadEconomiaDetails(economiaId);
+            }
+        }
+
+        // Função para toggle de seções
+        function toggleSection(sectionId) {
+            const section = document.getElementById('section-' + sectionId);
+            const header = section.previousElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                icon.textContent = '▼';
+            } else {
+                section.style.display = 'none';
+                icon.textContent = '▶';
+            }
+        }
+
+        // Configurar logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            Controller.logout();
+        });
+    </script>
+</body>
+</html>
