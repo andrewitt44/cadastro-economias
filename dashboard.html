@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sistema de Economias</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Sistema de Economias</h1>
+                <div class="user-info">
+                    <span id="userDisplay"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Indicators -->
+            <section class="indicators">
+                <div class="indicator-card">
+                    <h3>Total Economizado</h3>
+                    <p class="indicator-value" id="totalEconomizado">R$ 0,00</p>
+                </div>
+                <div class="indicator-card success">
+                    <h3>Total Aprovado</h3>
+                    <p class="indicator-value" id="totalAprovado">R$ 0,00</p>
+                </div>
+                <div class="indicator-card warning">
+                    <h3>Total Pendente</h3>
+                    <p class="indicator-value" id="totalPendente">R$ 0,00</p>
+                </div>
+            </section>
+            
+            <!-- Actions -->
+            <section class="actions-bar">
+                <button id="btnNovaEconomia" class="btn btn-primary">+ Nova Economia</button>
+                
+                <!-- Filtros (apenas para Gestor) -->
+                <div id="filtrosGestor" class="filters" style="display: none;">
+                    <select id="filtroUsuario" class="filter-select">
+                        <option value="">Todos os usuários</option>
+                    </select>
+                    
+                    <select id="filtroTipo" class="filter-select">
+                        <option value="">Todos os tipos</option>
+                        <option value="BID">BID</option>
+                        <option value="Cotação">Cotação</option>
+                    </select>
+                    
+                    <select id="filtroStatus" class="filter-select">
+                        <option value="">Todos os status</option>
+                        <option value="Aprovado">Aprovado</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Reprovado">Reprovado</option>
+                    </select>
+                    
+                    <input type="date" id="filtroDataInicio" class="filter-input">
+                    <input type="date" id="filtroDataFim" class="filter-input">
+                    
+                    <button id="btnAplicarFiltros" class="btn btn-secondary">Aplicar Filtros</button>
+                    <button id="btnLimparFiltros" class="btn btn-secondary">Limpar</button>
+                </div>
+            </section>
+            
+            <!-- Lista de Economias -->
+            <section class="economias-list">
+                <h2>Economias Cadastradas</h2>
+                <div id="listaEconomias" class="cards-container">
+                    <!-- Economias serão renderizadas aqui -->
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <!-- Modal de Nova/Editar Economia -->
+    <div id="modalEconomia" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nova Economia</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formEconomia">
+                    <div class="form-group">
+                        <label for="codigoFornecedor">Código do Fornecedor *</label>
+                        <input type="text" id="codigoFornecedor" name="codigoFornecedor" 
+                               placeholder="Ex: FORN-001" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="valorOriginal">Valor Original (R$) *</label>
+                        <input type="number" id="valorOriginal" name="valorOriginal" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="valorCorrigido">Valor Corrigido (R$) *</label>
+                        <input type="number" id="valorCorrigido" name="valorCorrigido" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="valorEconomia">Valor da Economia (R$)</label>
+                        <input type="number" id="valorEconomia" name="valorEconomia" 
+                               step="0.01" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tipo">Tipo *</label>
+                        <select id="tipo" name="tipo" required>
+                            <option value="">Selecione...</option>
+                            <option value="BID">BID</option>
+                            <option value="Cotação">Cotação</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="descricao">Descrição</label>
+                        <textarea id="descricao" name="descricao" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="arquivo">Arquivos de Prova (PDF, PNG, JPG) *</label>
+                        <input type="file" id="arquivo" name="arquivo" 
+                               accept=".pdf,.png,.jpg,.jpeg" multiple required>
+                        <small class="form-help">Tamanho máximo: 5MB por arquivo. Você pode selecionar múltiplos arquivos.</small>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelModal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Aprovação (Gestor) -->
+    <div id="modalAprovacao" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Aprovar/Reprovar Economia</h2>
+                <button class="modal-close" id="closeModalAprovacao">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="detalhesEconomia"></div>
+                <form id="formAprovacao">
+                    <div class="form-group">
+                        <label for="observacoes">Observações</label>
+                        <textarea id="observacoes" name="observacoes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelAprovacao">Cancelar</button>
+                        <button type="button" class="btn btn-danger" id="btnReprovar">Reprovar</button>
+                        <button type="button" class="btn btn-success" id="btnAprovar">Aprovar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/model.js"></script>
+    <script src="js/view.js"></script>
+    <script src="js/controller.js"></script>
+    <script>
+        // Verificar se usuário está logado
+        const currentUser = Controller.getCurrentUser();
+        if (!currentUser) {
+            window.location.href = 'index.html';
+        } else {
+            // Inicializar dashboard
+            Controller.initDashboard();
+        }
+    </script>
+</body>
+</html>

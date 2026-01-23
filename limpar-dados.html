@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpar Banco de Dados - Sistema de Economias</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-box">
+            <h1>⚠️ Limpar Banco de Dados</h1>
+            <p class="subtitle" style="color: #ef4444;">Esta ação não pode ser desfeita!</p>
+            
+            <div style="margin: 24px 0; padding: 16px; background: #fee2e2; border-radius: 8px;">
+                <p style="margin: 8px 0; color: #991b1b;"><strong>Esta ação irá:</strong></p>
+                <ul style="margin: 8px 0 8px 20px; color: #991b1b;">
+                    <li>Apagar todas as economias cadastradas</li>
+                    <li>Manter os usuários padrão (auditor e gestor)</li>
+                    <li>Fazer logout automático</li>
+                </ul>
+            </div>
+            
+            <button onclick="limparApenasEconomias()" class="btn btn-warning btn-block" style="background-color: #f59e0b; margin-bottom: 12px;">
+                Limpar Apenas Economias
+            </button>
+            
+            <button onclick="limparTudo()" class="btn btn-danger btn-block" style="margin-bottom: 12px;">
+                Limpar Tudo (Reset Completo)
+            </button>
+            
+            <button onclick="window.location.href='index.html'" class="btn btn-secondary btn-block">
+                Cancelar
+            </button>
+            
+            <div id="resultado" style="margin-top: 20px; display: none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        function limparApenasEconomias() {
+            if (!confirm('Tem certeza que deseja apagar TODAS as economias?\n\nEsta ação NÃO pode ser desfeita!')) {
+                return;
+            }
+            
+            if (!confirm('ÚLTIMA CONFIRMAÇÃO: Apagar todas as economias?')) {
+                return;
+            }
+            
+            try {
+                // Limpar apenas economias
+                localStorage.setItem('economias', JSON.stringify([]));
+                
+                // Fazer logout
+                localStorage.setItem('currentSession', null);
+                
+                mostrarResultado('✅ Todas as economias foram apagadas com sucesso!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } catch (error) {
+                mostrarResultado('❌ Erro ao limpar economias: ' + error.message, 'error');
+            }
+        }
+        
+        function limparTudo() {
+            if (!confirm('Tem certeza que deseja fazer um RESET COMPLETO?\n\nIsso irá apagar:\n- Todas as economias\n- Sessão atual\n- Recriar usuários padrão\n\nEsta ação NÃO pode ser desfeita!')) {
+                return;
+            }
+            
+            if (!confirm('ÚLTIMA CONFIRMAÇÃO: Fazer reset completo do sistema?')) {
+                return;
+            }
+            
+            try {
+                // Limpar tudo
+                localStorage.clear();
+                
+                // Recriar usuários padrão
+                const users = [
+                    {
+                        id: '1',
+                        username: 'auditor',
+                        password: '123456',
+                        name: 'João Auditor',
+                        role: 'auditor'
+                    },
+                    {
+                        id: '2',
+                        username: 'gestor',
+                        password: '123456',
+                        name: 'Maria Gestora',
+                        role: 'gestor'
+                    }
+                ];
+                
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.setItem('economias', JSON.stringify([]));
+                localStorage.setItem('currentSession', null);
+                
+                mostrarResultado('✅ Reset completo realizado com sucesso!', 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 2000);
+            } catch (error) {
+                mostrarResultado('❌ Erro ao fazer reset: ' + error.message, 'error');
+            }
+        }
+        
+        function mostrarResultado(mensagem, tipo) {
+            const resultadoDiv = document.getElementById('resultado');
+            resultadoDiv.style.display = 'block';
+            resultadoDiv.className = tipo === 'success' ? 'success-message' : 'error-message';
+            resultadoDiv.textContent = mensagem;
+        }
+    </script>
+</body>
+</html>
