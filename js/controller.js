@@ -162,8 +162,12 @@ const Controller = {
             formCorrecao.addEventListener('submit', (e) => this.handleCorrecaoSubmit(e));
             
             // Calcular economia automaticamente
-            document.getElementById('corr_valorOriginal').addEventListener('input', () => View.updateEconomiaValueCorrecao());
+            document.getElementById('corr_valorOriginal').addEventListener('input', () => this.handleDescontoCalculation());
             document.getElementById('corr_valorCorrigido').addEventListener('input', () => View.updateEconomiaValueCorrecao());
+            
+            // Event listeners para desconto
+            document.getElementById('corr_useDesconto').addEventListener('change', () => this.handleDescontoToggle());
+            document.getElementById('corr_desconto').addEventListener('input', () => this.handleDescontoCalculation());
             
             // Event listeners para moeda e data (Correção)
             document.getElementById('corr_moeda').addEventListener('change', () => this.handleMoedaChange('corr'));
@@ -362,6 +366,54 @@ const Controller = {
      * Handler para mudança de valores (correção)
      */
     handleValorChange(prefix) {
+        View.updateEconomiaValueCorrecao();
+    },
+    
+    /**
+     * Handler para toggle do checkbox de desconto
+     */
+    handleDescontoToggle() {
+        const useDesconto = document.getElementById('corr_useDesconto').checked;
+        const descontoGroup = document.getElementById('corr_descontoGroup');
+        const valorCorrigidoInput = document.getElementById('corr_valorCorrigido');
+        
+        if (useDesconto) {
+            // Mostrar campo de desconto
+            descontoGroup.style.display = 'block';
+            // Desabilitar campo valor corrigido
+            valorCorrigidoInput.readOnly = true;
+            valorCorrigidoInput.style.backgroundColor = '#f0f0f0';
+            // Calcular automaticamente
+            this.handleDescontoCalculation();
+        } else {
+            // Esconder campo de desconto
+            descontoGroup.style.display = 'none';
+            // Habilitar campo valor corrigido
+            valorCorrigidoInput.readOnly = false;
+            valorCorrigidoInput.style.backgroundColor = '';
+            // Limpar desconto
+            document.getElementById('corr_desconto').value = '0';
+        }
+    },
+    
+    /**
+     * Calcular valor corrigido com desconto
+     */
+    handleDescontoCalculation() {
+        const useDesconto = document.getElementById('corr_useDesconto').checked;
+        
+        if (useDesconto) {
+            const valorOriginal = parseFloat(document.getElementById('corr_valorOriginal').value) || 0;
+            const desconto = parseFloat(document.getElementById('corr_desconto').value) || 0;
+            
+            if (valorOriginal > 0 && desconto >= 0 && desconto <= 100) {
+                // Calcular: valorCorrigido = valorOriginal * (1 - desconto/100)
+                const valorCorrigido = valorOriginal * (1 - desconto / 100);
+                document.getElementById('corr_valorCorrigido').value = valorCorrigido.toFixed(2);
+            }
+        }
+        
+        // Atualizar valor da economia
         View.updateEconomiaValueCorrecao();
     },
     
