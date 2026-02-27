@@ -1,41 +1,80 @@
-/**
+﻿/**
  * CONTROLLER - Camada de Controle
  * Responsável por coordenar Model e View, gerenciar eventos e lógica de negócio
+ * Autenticação via Supabase (Google/Microsoft OAuth)
  */
 
 const Controller = {
+    _currentUser: null,
+
     /**
-     * Fazer login
+     * Inicializar autenticação via Supabase
+     * Retorna o usuário autenticado ou redireciona para login
      */
-    login(username, password) {
-        return Model.authenticateUser(username, password);
+    async initAuth() {
+        if (typeof SupabaseConfig === 'undefined' || !SupabaseConfig.client) {
+            window.location.href = 'login-supabase.html';
+            return null;
+        }
+        try {
+            const session = await SupabaseConfig.checkAuth();
+            if (!session) {
+                window.location.href = 'login-supabase.html';
+                return null;
+            }
+            this._currentUser = await SupabaseConfig.getCurrentUser();
+            if (!this._currentUser) {
+                window.location.href = 'login-supabase.html';
+                return null;
+            }
+            // Sincronizar com Model para que save methods funcionem
+            Model.setCurrentUser(this._currentUser);
+
+            // Monitorar expiração da sessão
+            SupabaseConfig.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+                    this._currentUser = null;
+                    window.location.href = 'login-supabase.html';
+                }
+            });
+
+            return this._currentUser;
+        } catch (error) {
+            console.error('Erro na autenticação:', error);
+            window.location.href = 'login-supabase.html';
+            return null;
+        }
     },
-    
+
     /**
-     * Obter usuário atual
+     * Obter usuário atual (síncrono - já carregado por initAuth)
      */
     getCurrentUser() {
-        return Model.getCurrentSession();
+        return this._currentUser;
     },
     
     /**
-     * Fazer logout
+     * Fazer logout via Supabase
      */
-    logout() {
-        Model.logout();
-        window.location.href = 'index.html';
-    },
-    
-    /**
-     * Inicializar dashboard
-     */
-    initDashboard() {
-        const currentUser = this.getCurrentUser();
-        
-        if (!currentUser) {
-            window.location.href = 'index.html';
-            return;
+    async logout() {
+        try {
+            if (typeof SupabaseConfig !== 'undefined' && SupabaseConfig.client) {
+                await SupabaseConfig.logout();
+            }
+        } catch (e) {
+            console.error('Erro ao deslogar:', e);
         }
+        this._currentUser = null;
+        window.location.href = 'login-supabase.html';
+    },
+    
+    /**
+     * Inicializar dashboard (async - verifica auth Supabase)
+     */
+    async initDashboard() {
+        const currentUser = await this.initAuth();
+        
+        if (!currentUser) return;
         
         // Renderizar informações do usuário
         View.renderUserInfo(currentUser);
@@ -54,30 +93,40 @@ const Controller = {
         View.itemsPerPage = 35;
         
         // Carregar economias
-        this.loadEconomias();
+        await this.loadEconomias();
         
         // Configurar event listeners
         this.setupEventListeners();
     },
     
     /**
-     * Carregar e renderizar economias
+     * Carregar e renderizar economias (async - Supabase DB)
      */
-    loadEconomias(filters = null) {
+    async loadEconomias(filters = null) {
         const currentUser = this.getCurrentUser();
         let economias;
         
-        if (currentUser.role === 'gestor') {
-            // Gestor vê todas as economias
-            if (filters) {
-                economias = Model.filterEconomias(filters);
+        console.log('[Controller] loadEconomias - role:', currentUser.role, 'id:', currentUser.id);
+        
+        try {
+            if (currentUser.role === 'gestor') {
+                if (filters) {
+                    economias = await Model.filterEconomias(filters);
+                } else {
+                    economias = await Model.getEconomias();
+                }
             } else {
-                economias = Model.getEconomias();
+                economias = await Model.getEconomiasByUser(currentUser.id);
             }
-        } else {
-            // Auditor vê apenas suas próprias economias
-            economias = Model.getEconomiasByUser(currentUser.id);
+        } catch (error) {
+            console.error('[Controller] Erro ao carregar economias:', error);
+            View.showToast('Erro ao carregar economias do servidor', 'error');
+            economias = [];
         }
+        
+        console.log('[Controller] economias carregadas:', (economias || []).length);
+        
+        if (!economias) economias = [];
         
         // Calcular totais
         const totals = Model.calculateTotals(economias);
@@ -96,6 +145,12 @@ const Controller = {
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => this.logout());
+        }
+        
+        // Excluir conta (para testes)
+        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+        if (deleteAccountBtn) {
+            deleteAccountBtn.addEventListener('click', () => this.deleteAccount());
         }
         
         // Nova economia - abrir modal de seleção de tipo
@@ -183,9 +238,9 @@ const Controller = {
         
         const btnLimparFiltros = document.getElementById('btnLimparFiltros');
         if (btnLimparFiltros) {
-            btnLimparFiltros.addEventListener('click', () => {
+            btnLimparFiltros.addEventListener('click', async () => {
                 View.clearFilters();
-                this.loadEconomias();
+                await this.loadEconomias();
             });
         }
         
@@ -249,12 +304,12 @@ const Controller = {
                 // Pegar cotação de venda
                 return data.value[0].cotacaoVenda;
             } else {
-                View.showError('Não foi encontrada cotação PTAX para esta data. Verifique se é dia útil.');
+                View.showToast('Não foi encontrada cotação PTAX para esta data. Verifique se é dia útil.', 'error');
                 return null;
             }
         } catch (error) {
             console.error('Erro ao buscar PTAX:', error);
-            View.showError('Erro ao buscar cotação PTAX. Por favor, tente novamente.');
+            View.showToast('Erro ao buscar cotação PTAX. Por favor, tente novamente.', 'error');
             return null;
         }
     },
@@ -440,7 +495,7 @@ const Controller = {
             const arquivoInput = document.getElementById('canc_arquivo');
             
             if (!codigoFornecedor || !data || !valorCancelado || !tipo) {
-                View.showError('Preencha todos os campos obrigatórios');
+                View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
             
@@ -450,19 +505,19 @@ const Controller = {
             if (moeda === 'USD') {
                 ptax = parseFloat(document.getElementById('canc_ptax').value);
                 if (!ptax) {
-                    View.showError('Aguarde o carregamento da cotação PTAX');
+                    View.showToast('Aguarde o carregamento da cotação PTAX', 'error');
                     return;
                 }
                 // Pegar o valor BRL já calculado automaticamente
                 valorBRL = parseFloat(document.getElementById('canc_valorBRL').value);
                 if (!valorBRL || valorBRL <= 0) {
-                    View.showError('Erro ao calcular valor em BRL');
+                    View.showToast('Erro ao calcular valor em BRL', 'error');
                     return;
                 }
             }
             
             if (!arquivoInput.files || arquivoInput.files.length === 0) {
-                View.showError('É obrigatório anexar pelo menos um arquivo de prova');
+                View.showToast('É obrigatório anexar pelo menos um arquivo de prova', 'error');
                 return;
             }
             
@@ -473,10 +528,16 @@ const Controller = {
                 const arquivo = arquivoInput.files[i];
                 
                 if (!allowedTypes.includes(arquivo.type)) {
-                    View.showError(`Arquivo "${arquivo.name}" tem formato inválido. Use PDF, PNG ou JPG`);
+                    View.showToast(`Arquivo "${arquivo.name}" tem formato inválido. Use PDF, PNG ou JPG`, 'error');
                     return;
                 }
                 
+                if (arquivo.size > 5 * 1024 * 1024) {
+                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 5MB`, 'error');
+                    return;
+                }
+                
+                // Converter para base64 para upload via Model
                 try {
                     const arquivoBase64 = await Model.fileToBase64(arquivo);
                     arquivos.push({
@@ -485,7 +546,7 @@ const Controller = {
                         dados: arquivoBase64
                     });
                 } catch (error) {
-                    View.showError(`Erro ao processar arquivo "${arquivo.name}": ${error.message}`);
+                    View.showToast(`Erro ao processar arquivo "${arquivo.name}": ${error.message}`, 'error');
                     return;
                 }
             }
@@ -504,18 +565,18 @@ const Controller = {
                 arquivos
             };
             
-            const result = Model.saveEconomiaCancelamento(economiaData);
+            const result = await Model.saveEconomiaCancelamento(economiaData);
             
             if (result.success) {
-                View.showSuccess('Economia (Cancelamento) cadastrada com sucesso!');
+                View.showToast('Economia (Cancelamento) cadastrada com sucesso!', 'success');
                 View.closeCancelamentoModal();
-                this.loadEconomias();
+                await this.loadEconomias();
             } else {
-                View.showError(result.message);
+                View.showToast(result.message, 'error');
             }
             
         } catch (error) {
-            View.showError('Erro ao salvar economia: ' + error.message);
+            View.showToast('Erro ao salvar economia: ' + error.message, 'error');
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'Salvar';
@@ -546,7 +607,7 @@ const Controller = {
             const arquivoInput = document.getElementById('corr_arquivo');
             
             if (!codigoFornecedor || !data || !valorOriginal || !valorCorrigido || !tipo) {
-                View.showError('Preencha todos os campos obrigatórios');
+                View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
             
@@ -557,7 +618,7 @@ const Controller = {
             if (moeda === 'USD') {
                 ptax = parseFloat(document.getElementById('corr_ptax').value);
                 if (!ptax) {
-                    View.showError('Aguarde o carregamento da cotação PTAX');
+                    View.showToast('Aguarde o carregamento da cotação PTAX', 'error');
                     return;
                 }
                 // Aplicar ágio e converter para BRL
@@ -567,7 +628,7 @@ const Controller = {
             }
             
             if (!arquivoInput.files || arquivoInput.files.length === 0) {
-                View.showError('É obrigatório anexar pelo menos um arquivo de prova');
+                View.showToast('É obrigatório anexar pelo menos um arquivo de prova', 'error');
                 return;
             }
             
@@ -578,7 +639,12 @@ const Controller = {
                 const arquivo = arquivoInput.files[i];
                 
                 if (!allowedTypes.includes(arquivo.type)) {
-                    View.showError(`Arquivo "${arquivo.name}" tem formato inválido. Use PDF, PNG ou JPG`);
+                    View.showToast(`Arquivo "${arquivo.name}" tem formato inválido. Use PDF, PNG ou JPG`, 'error');
+                    return;
+                }
+                
+                if (arquivo.size > 5 * 1024 * 1024) {
+                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 5MB`, 'error');
                     return;
                 }
                 
@@ -590,7 +656,7 @@ const Controller = {
                         dados: arquivoBase64
                     });
                 } catch (error) {
-                    View.showError(`Erro ao processar arquivo "${arquivo.name}": ${error.message}`);
+                    View.showToast(`Erro ao processar arquivo "${arquivo.name}": ${error.message}`, 'error');
                     return;
                 }
             }
@@ -611,110 +677,19 @@ const Controller = {
                 arquivos
             };
             
-            const result = Model.saveEconomiaCorrecao(economiaData);
+            const result = await Model.saveEconomiaCorrecao(economiaData);
             
             if (result.success) {
-                View.showSuccess('Economia (Correção) cadastrada com sucesso!');
+                View.showToast('Economia (Correção) cadastrada com sucesso!', 'success');
                 View.closeCorrecaoModal();
-                this.loadEconomias();
+                await this.loadEconomias();
             } else {
-                View.showError(result.message);
+                View.showToast(result.message, 'error');
             }
             
         } catch (error) {
-            View.showError('Erro ao salvar economia: ' + error.message);
+            View.showToast('Erro ao salvar economia: ' + error.message, 'error');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Salvar';
-        }
-    },
-    
-    /**
-     * Processar submissão de economia
-     */
-    async handleEconomiaSubmit(e) {
-        e.preventDefault();
-        
-        const form = e.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        
-        // Desabilitar botão para evitar múltiplos cliques
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Salvando...';
-        
-        try {
-            // Obter dados do formulário
-            const codigoFornecedor = document.getElementById('codigoFornecedor').value;
-            const valorOriginal = document.getElementById('valorOriginal').value;
-            const valorCorrigido = document.getElementById('valorCorrigido').value;
-            const tipo = document.getElementById('tipo').value;
-            const descricao = document.getElementById('descricao').value;
-            const arquivoInput = document.getElementById('arquivo');
-            
-            // Validar campos obrigatórios
-            if (!codigoFornecedor || !valorOriginal || !valorCorrigido || !tipo) {
-                View.showError('Preencha todos os campos obrigatórios');
-                return;
-            }
-            
-            // Validar arquivos
-            if (!arquivoInput.files || arquivoInput.files.length === 0) {
-                View.showError('É obrigatório anexar pelo menos um arquivo de prova');
-                return;
-            }
-            
-            // Validar e processar todos os arquivos
-            const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
-            const arquivos = [];
-            
-            for (let i = 0; i < arquivoInput.files.length; i++) {
-                const arquivo = arquivoInput.files[i];
-                
-                // Validar tipo de arquivo
-                if (!allowedTypes.includes(arquivo.type)) {
-                    View.showError(`Arquivo "${arquivo.name}" tem formato inválido. Use PDF, PNG ou JPG`);
-                    return;
-                }
-                
-                try {
-                    // Converter arquivo para Base64
-                    const arquivoBase64 = await Model.fileToBase64(arquivo);
-                    arquivos.push({
-                        nome: arquivo.name,
-                        tipo: arquivo.type,
-                        dados: arquivoBase64
-                    });
-                } catch (error) {
-                    View.showError(`Erro ao processar arquivo "${arquivo.name}": ${error.message}`);
-                    return;
-                }
-            }
-            
-            // Preparar dados
-            const economiaData = {
-                codigoFornecedor,
-                valorOriginal,
-                valorCorrigido,
-                tipo,
-                descricao,
-                arquivos: arquivos
-            };
-            
-            // Salvar economia
-            const result = Model.saveEconomia(economiaData);
-            
-            if (result.success) {
-                View.showSuccess('Economia cadastrada com sucesso!');
-                View.closeEconomiaModal();
-                this.loadEconomias();
-            } else {
-                View.showError(result.message);
-            }
-            
-        } catch (error) {
-            View.showError('Erro ao salvar economia: ' + error.message);
-        } finally {
-            // Reabilitar botão
             submitBtn.disabled = false;
             submitBtn.textContent = 'Salvar';
         }
@@ -723,7 +698,7 @@ const Controller = {
     /**
      * Aplicar filtros
      */
-    applyFilters() {
+    async applyFilters() {
         const filters = {
             userId: document.getElementById('filtroUsuario').value,
             tipo: document.getElementById('filtroTipo').value,
@@ -732,31 +707,62 @@ const Controller = {
             dataFim: document.getElementById('filtroDataFim').value
         };
         
-        this.loadEconomias(filters);
+        await this.loadEconomias(filters);
     },
     
     /**
-     * Visualizar arquivo
+     * Visualizar arquivo (async - busca URL do Supabase Storage)
      */
-    viewFile(economiaId, fileIndex = 0) {
-        const economia = Model.getEconomiaById(economiaId);
+    async viewFile(economiaId, fileIndex = 0) {
+        const economia = await Model.getEconomiaById(economiaId);
         
         if (!economia) {
-            View.showError('Economia não encontrada');
+            View.showToast('Economia não encontrada', 'error');
             return;
         }
         
-        View.viewFile(economia, fileIndex);
+        const arquivos = economia.arquivos || [];
+        if (arquivos.length === 0) {
+            View.showToast('Nenhum arquivo anexado', 'error');
+            return;
+        }
+
+        const arquivo = arquivos[fileIndex];
+        if (!arquivo) {
+            View.showToast('Arquivo não encontrado', 'error');
+            return;
+        }
+
+        // Se tem URL do Storage, buscar URL atualizada
+        if (arquivo.storagePath) {
+            try {
+                const url = await Model.getFileUrl(arquivo.storagePath);
+                if (url) {
+                    window.open(url, '_blank');
+                    return;
+                }
+            } catch (err) {
+                console.error('Erro ao obter URL do arquivo:', err);
+            }
+        }
+
+        // Fallback para dados inline (base64) se existir
+        if (arquivo.dados) {
+            View.viewFile(economia, fileIndex);
+            return;
+        }
+
+        View.showToast('Não foi possível abrir o arquivo', 'error');
     },
     
     /**
-     * Abrir modal de aprovação
+     * Abrir modal de aprovação (async)
      */
-    openApprovalModal(economiaId) {
-        const economia = Model.getEconomiaById(economiaId);
+    async openApprovalModal(economiaId) {
+        const economia = await Model.getEconomiaById(economiaId);
         
         if (!economia) {
-            View.showError('Economia não encontrada');
+            View.showToast('Economia não encontrada', 'error');
             return;
         }
         
@@ -764,44 +770,49 @@ const Controller = {
     },
     
     /**
-     * Processar aprovação/reprovação
+     * Processar aprovação/reprovação (async)
      */
-    handleApproval(status) {
+    async handleApproval(status) {
         const modal = document.getElementById('modalAprovacao');
         const economiaId = modal.getAttribute('data-economia-id');
         const observacoes = document.getElementById('observacoes').value;
         
         if (!economiaId) {
-            View.showError('Erro ao processar aprovação');
+            View.showToast('Erro ao processar aprovação', 'error');
             return;
         }
         
         // Confirmar ação
         const action = status === 'Aprovado' ? 'aprovar' : 'reprovar';
-        if (!confirm(`Tem certeza que deseja ${action} esta economia?`)) {
-            return;
-        }
+        const confirmed = await View.showConfirm({
+            title: `${status === 'Aprovado' ? 'Aprovar' : 'Reprovar'} Economia`,
+            message: `Tem certeza que deseja ${action} esta economia?`,
+            icon: status === 'Aprovado' ? 'success' : 'warning',
+            confirmText: status === 'Aprovado' ? 'Aprovar' : 'Reprovar',
+            danger: status !== 'Aprovado'
+        });
+        if (!confirmed) return;
         
         // Atualizar status
-        const result = Model.updateEconomiaStatus(economiaId, status, observacoes);
+        const result = await Model.updateEconomiaStatus(economiaId, status, observacoes);
         
         if (result.success) {
-            View.showSuccess(`Economia ${status.toLowerCase()} com sucesso!`);
+            View.showToast(`Economia ${status.toLowerCase()} com sucesso!`, 'success');
             View.closeApprovalModal();
-            this.loadEconomias();
+            await this.loadEconomias();
         } else {
-            View.showError(result.message);
+            View.showToast(result.message, 'error');
         }
     },
     
     /**
-     * Carregar detalhes de uma economia específica
+     * Carregar detalhes de uma economia específica (async)
      */
-    loadEconomiaDetails(economiaId) {
-        const economia = Model.getEconomiaById(economiaId);
+    async loadEconomiaDetails(economiaId) {
+        const economia = await Model.getEconomiaById(economiaId);
         
         if (!economia) {
-            View.showError('Economia não encontrada');
+            View.showToast('Economia não encontrada', 'error');
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
             }, 2000);
@@ -809,5 +820,39 @@ const Controller = {
         }
         
         View.renderEconomiaDetails(economia, this.getCurrentUser().role);
+    },
+
+    /**
+     * Deletar conta do usuário (para testes)
+     */
+    async deleteAccount() {
+        const step1 = await View.showConfirm({
+            title: 'Excluir Conta',
+            message: 'Isso irá excluir permanentemente sua conta e todos os dados associados. Deseja continuar?',
+            icon: 'danger',
+            confirmText: 'Sim, excluir',
+            danger: true
+        });
+        if (!step1) return;
+
+        const step2 = await View.showConfirm({
+            title: 'Confirmação Final',
+            message: 'Esta ação NÃO pode ser desfeita. Confirma a exclusão da conta?',
+            icon: 'danger',
+            confirmText: 'Excluir permanentemente',
+            danger: true
+        });
+        if (!step2) return;
+        
+        try {
+            await SupabaseConfig.deleteAccount();
+            View.showToast('Conta excluída com sucesso', 'success');
+            setTimeout(() => {
+                window.location.href = 'login-supabase.html';
+            }, 1500);
+        } catch (error) {
+            console.error('Erro ao excluir conta:', error);
+            View.showToast('Erro ao excluir conta: ' + error.message, 'error');
+        }
     }
 };

@@ -6,87 +6,33 @@
     <title>Login - Sistema de Economias</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .social-login {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        
-        .btn-social {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 12px 24px;
-            border: 1px solid #ddd;
-            background: white;
-            color: #333;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        
-        .btn-social:hover {
-            background: #f8f9fa;
-            border-color: #ccc;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .btn-microsoft {
-            border-color: #0078d4;
-        }
-        
-        .btn-microsoft:hover {
-            background: #f3f9ff;
-            border-color: #0078d4;
-        }
-        
-        .btn-google {
-            border-color: #ea4335;
-        }
-        
-        .btn-google:hover {
-            background: #fff5f5;
-            border-color: #ea4335;
-        }
-        
-        .divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 24px 0;
-            color: #999;
-            font-size: 14px;
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .divider span {
-            padding: 0 12px;
-        }
-        
         .login-footer {
             text-align: center;
             margin-top: 20px;
             font-size: 13px;
-            color: #666;
+            color: var(--text-secondary);
         }
-        
-        .loading {
+        .error-box {
             display: none;
-            text-align: center;
-            padding: 20px;
-            color: #666;
+            background: var(--danger-light);
+            border-left: 3px solid var(--danger);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: var(--danger-dark);
+            font-size: 13px;
         }
-        
-        .loading.show {
+        .error-box.show { display: block; }
+        .error-box strong { display: block; margin-bottom: 4px; }
+        .error-box code {
             display: block;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            background: rgba(0,0,0,0.05);
+            padding: 4px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -101,6 +47,12 @@
             </div>
             
             <div id="loginContent">
+                <div id="errorBox" class="error-box">
+                    <strong id="errorTitle">Erro ao fazer login</strong>
+                    <span id="errorMessage"></span>
+                    <code id="errorDetail"></code>
+                </div>
+
                 <div class="social-login">
                     <button id="btnLoginMicrosoft" class="btn btn-social btn-microsoft">
                         <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -130,32 +82,58 @@
         </div>
     </div>
     
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase SDK (arquivo local - mais confiável que CDN) -->
+    <script src="js/supabase.js"></script>
     <script src="js/supabase-config.js"></script>
     <script>
         const loadingDiv = document.getElementById('loadingDiv');
         const loginContent = document.getElementById('loginContent');
-        
-        // Verificar se já está logado
-        (async () => {
-            loadingDiv.classList.add('show');
-            loginContent.style.display = 'none';
-            
-            try {
-                const session = await SupabaseConfig.checkAuth();
-                if (session) {
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
-            } catch (error) {
-                console.error('Erro ao verificar autenticação:', error);
-            }
-            
+
+        function showError(title, message, detail) {
+            const box = document.getElementById('errorBox');
+            document.getElementById('errorTitle').textContent = title;
+            document.getElementById('errorMessage').textContent = message || '';
+            document.getElementById('errorDetail').textContent = detail || '';
+            document.getElementById('errorDetail').style.display = detail ? 'block' : 'none';
+            box.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('errorBox').classList.remove('show');
+        }
+
+        // Verificar se o SDK carregou corretamente
+        if (typeof SupabaseConfig === 'undefined') {
             loadingDiv.classList.remove('show');
             loginContent.style.display = 'block';
-        })();
-        
+            showError(
+                'Erro de carregamento',
+                'O SDK do Supabase não carregou. Verifique sua conexão com a internet e recarregue a página.',
+                'window.supabase = ' + (typeof window.supabase)
+            );
+        }
+
+        // Verificar se já está logado
+        if (typeof SupabaseConfig !== 'undefined') {
+            (async () => {
+                loadingDiv.classList.add('show');
+                loginContent.style.display = 'none';
+
+                try {
+                    const session = await SupabaseConfig.checkAuth();
+                    if (session) {
+                        window.location.href = 'dashboard.html';
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Erro ao verificar autenticação:', error);
+                }
+
+                loadingDiv.classList.remove('show');
+                loginContent.style.display = 'block';
+            })();
+        }
+
         // Login com Microsoft
         document.getElementById('btnLoginMicrosoft').addEventListener('click', async () => {
             const btn = document.getElementById('btnLoginMicrosoft');
@@ -163,10 +141,12 @@
             btn.textContent = 'Redirecionando...';
             
             try {
+                hideError();
                 await SupabaseConfig.loginWithMicrosoft();
             } catch (error) {
                 console.error('Erro ao fazer login com Microsoft:', error);
-                alert('Erro ao fazer login com Microsoft. Verifique se configurou corretamente no Supabase.');
+                const msg = error?.message || JSON.stringify(error);
+                showError('Erro ao fazer login com Microsoft', msg, `Código: ${error?.status || 'N/A'}`);
                 btn.disabled = false;
                 btn.innerHTML = `
                     <svg width="21" height="21" viewBox="0 0 21 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -187,10 +167,12 @@
             btn.textContent = 'Redirecionando...';
             
             try {
+                hideError();
                 await SupabaseConfig.loginWithGoogle();
             } catch (error) {
                 console.error('Erro ao fazer login com Google:', error);
-                alert('Erro ao fazer login com Google. Verifique se configurou corretamente no Supabase.');
+                const msg = error?.message || JSON.stringify(error);
+                showError('Erro ao fazer login com Google', msg, `Código: ${error?.status || 'N/A'}`);
                 btn.disabled = false;
                 btn.innerHTML = `
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">

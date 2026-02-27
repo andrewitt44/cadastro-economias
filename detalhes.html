@@ -13,8 +13,14 @@
             <div class="header-content">
                 <h1>Sistema de Economias</h1>
                 <div class="user-info">
-                    <span id="userDisplay"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar-placeholder" id="userAvatar">?</div>
+                        <div class="user-details">
+                            <span class="user-name" id="userName">Carregando...</span>
+                            <span class="user-email" id="userEmail"></span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn-logout">Sair</button>
                 </div>
             </div>
         </header>
@@ -157,36 +163,37 @@
         </main>
     </div>
 
+    <!-- Supabase SDK -->
+    <script src="js/supabase.js"></script>
+    <script src="js/supabase-config.js"></script>
     <script src="js/model.js"></script>
     <script src="js/view.js"></script>
     <script src="js/controller.js"></script>
     <script>
-        // Verificar se usuário está logado
-        const currentUser = Controller.getCurrentUser();
-        if (!currentUser) {
-            window.location.href = 'index.html';
-        } else {
-            // Renderizar informações do usuário
-            View.renderUserInfo(currentUser);
-            
-            // Obter ID da economia da URL
+        // Inicializar detalhes com autenticação Supabase (async)
+        (async () => {
+            const user = await Controller.initAuth();
+            if (!user) return;
+
+            View.renderUserInfo(user);
+
             const urlParams = new URLSearchParams(window.location.search);
             const economiaId = urlParams.get('id');
-            
+
             if (!economiaId) {
-                alert('Economia não encontrada');
+                View.showToast('Economia não encontrada', 'error');
                 window.location.href = 'dashboard.html';
             } else {
-                Controller.loadEconomiaDetails(economiaId);
+                await Controller.loadEconomiaDetails(economiaId);
             }
-        }
 
-        // Função para toggle de seções
+            document.getElementById('logoutBtn').addEventListener('click', () => Controller.logout());
+        })();
+
         function toggleSection(sectionId) {
             const section = document.getElementById('section-' + sectionId);
             const header = section.previousElementSibling;
             const icon = header.querySelector('.toggle-icon');
-            
             if (section.style.display === 'none') {
                 section.style.display = 'block';
                 icon.textContent = '▼';
@@ -195,11 +202,6 @@
                 icon.textContent = '▶';
             }
         }
-
-        // Configurar logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            Controller.logout();
-        });
     </script>
 </body>
 </html>

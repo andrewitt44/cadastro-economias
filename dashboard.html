@@ -13,8 +13,15 @@
             <div class="header-content">
                 <h1>Sistema de Economias</h1>
                 <div class="user-info">
-                    <span id="userDisplay"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Sair</button>
+                    <div class="user-profile" id="userProfile">
+                        <div class="user-avatar-placeholder" id="userAvatar">?</div>
+                        <div class="user-details">
+                            <span class="user-name" id="userName">Carregando...</span>
+                            <span class="user-email" id="userEmail"></span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn-logout">Sair</button>
+                    <button id="deleteAccountBtn" class="btn-logout" style="background: var(--danger); color: white; font-size: 11px; padding: 4px 8px; margin-left: 4px;" title="Excluir conta (para testes)">🗑️</button>
                 </div>
             </div>
         </header>
@@ -341,18 +348,15 @@
         </div>
     </div>
     
+    <!-- Supabase SDK -->
+    <script src="js/supabase.js"></script>
+    <script src="js/supabase-config.js"></script>
     <script src="js/model.js"></script>
     <script src="js/view.js"></script>
     <script src="js/controller.js"></script>
     <script>
-        // Verificar se usuário está logado
-        const currentUser = Controller.getCurrentUser();
-        if (!currentUser) {
-            window.location.href = 'index.html';
-        } else {
-            // Inicializar dashboard
-            Controller.initDashboard();
-        }
+        // Inicializar dashboard com autenticação Supabase (async)
+        Controller.initDashboard();
     </script>
 </body>
 </html>

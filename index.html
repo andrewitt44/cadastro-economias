@@ -2,65 +2,11 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Economias - Login</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta http-equiv="refresh" content="0;url=login-supabase.html">
+    <title>Redirecionando...</title>
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-box">
-            <h1>Sistema de Economias</h1>
-            <p class="subtitle">Auditoria de Exportação</p>
-            
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="username">Usuário</label>
-                    <input type="text" id="username" name="username" required autocomplete="username">
-                </div>
-                
-                <div class="form-group">
-                    <label for="password">Senha</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-block">Entrar</button>
-                
-                <div id="loginError" class="error-message" style="display: none;"></div>
-            </form>
-            
-            <div class="demo-credentials">
-                <p><strong>Credenciais de demonstração:</strong></p>
-                <p>Auditor: <code>auditor / 123456</code></p>
-                <p>Gestor: <code>gestor / 123456</code></p>
-            </div>
-        </div>
-    </div>
-    
-    <script src="js/model.js"></script>
-    <script src="js/view.js"></script>
-    <script src="js/controller.js"></script>
-    <script>
-        // Inicializar sistema no primeiro acesso
-        if (!localStorage.getItem('users')) {
-            Model.initializeSystem();
-        }
-        
-        // Handler de login
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            const result = Controller.login(username, password);
-            
-            if (result.success) {
-                window.location.href = 'dashboard.html';
-            } else {
-                const errorDiv = document.getElementById('loginError');
-                errorDiv.textContent = result.message;
-                errorDiv.style.display = 'block';
-            }
-        });
-    </script>
+<body>
+    <p>Redirecionando para o login...</p>
+    <script>window.location.href = 'login-supabase.html';</script>
 </body>
 </html>

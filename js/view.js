@@ -9,12 +9,31 @@ const View = {
     allEconomias: [],
     
     /**
-     * Renderizar informações do usuário no header
+     * Renderizar informações do usuário no header (com avatar)
      */
     renderUserInfo(user) {
-        const userDisplay = document.getElementById('userDisplay');
-        if (userDisplay) {
-            userDisplay.textContent = `${user.name} (${user.role === 'gestor' ? 'Gestor' : 'Auditor'})`;
+        const userName = document.getElementById('userName');
+        const userEmail = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
+
+        if (userName) userName.textContent = user.name || 'Usuário';
+        if (userEmail) userEmail.textContent = user.email || '';
+
+        if (userAvatar && user.avatar) {
+            const img = document.createElement('img');
+            img.src = user.avatar;
+            img.alt = user.name || 'Avatar';
+            img.className = 'user-avatar';
+            img.onerror = () => {
+                // Fallback se a imagem não carregar
+                const placeholder = document.createElement('div');
+                placeholder.className = 'user-avatar-placeholder';
+                placeholder.textContent = (user.name || '?').charAt(0).toUpperCase();
+                img.replaceWith(placeholder);
+            };
+            userAvatar.replaceWith(img);
+        } else if (userAvatar) {
+            userAvatar.textContent = (user.name || '?').charAt(0).toUpperCase();
         }
     },
     
@@ -96,7 +115,7 @@ const View = {
                     <td><span class="badge-status ${statusClass}">${economia.status}</span></td>
                     <td>
                         <button class="btn-icon" onclick="window.location.href='detalhes.html?id=${economia.id}'" title="Ver detalhes">
-                            👁️
+                            ✏️
                         </button>
                         ${canApprove ? `<button class="btn-icon" onclick="Controller.openApprovalModal('${economia.id}')" title="Aprovar/Reprovar">✓</button>` : ''}
                     </td>
@@ -144,7 +163,7 @@ const View = {
         const filtroUsuario = document.getElementById('filtroUsuario');
         if (filtroUsuario) {
             filtroUsuario.style.display = 'block';
-            this.populateUserFilter();
+            this.populateUserFilter(); // async - carrega em background
         }
     },
     
@@ -180,18 +199,18 @@ const View = {
     },
     
     /**
-     * Popular filtro de usuários
+     * Popular filtro de usuários (busca da tabela profiles via Model)
      */
-    populateUserFilter() {
+    async populateUserFilter() {
         const filtroUsuario = document.getElementById('filtroUsuario');
         if (!filtroUsuario) return;
         
-        const users = Model.getUsers();
-        const auditors = users.filter(u => u.role === 'auditor');
+        // Buscar usuários do Supabase
+        const users = await Model.getAllUsers();
         
         filtroUsuario.innerHTML = '<option value="">Todos os usuários</option>';
-        auditors.forEach(user => {
-            filtroUsuario.innerHTML += `<option value="${user.id}">${user.name}</option>`;
+        users.forEach(u => {
+            filtroUsuario.innerHTML += `<option value="${u.id}">${u.name || u.email}</option>`;
         });
     },
     
@@ -267,17 +286,118 @@ const View = {
     },
     
     /**
-     * Exibir mensagem de erro
+     * Mostrar toast de notificação
      */
-    showError(message) {
-        alert(message);
+    showToast(message, type = 'error') {
+        // Criar container se não existir
+        let container = document.querySelector('.toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const icons = { success: '✓', error: '✕', warning: '⚠' };
+        const icon = icons[type] || icons.error;
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        container.appendChild(toast);
+
+        // Fechar ao clicar
+        toast.addEventListener('click', () => toast.remove());
+
+        // Auto-remover após 4s
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100px)';
+            toast.style.transition = 'all 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    },
+
+    /**
+     * Mostrar diálogo de confirmação bonito (substitui confirm() nativo)
+     * @param {Object} options
+     * @param {string} options.title - Título do diálogo
+     * @param {string} options.message - Mensagem/descrição
+     * @param {string} [options.icon='warning'] - Tipo do ícone: warning, danger, info, success
+     * @param {string} [options.confirmText='Confirmar'] - Texto do botão de confirmar
+     * @param {string} [options.cancelText='Cancelar'] - Texto do botão de cancelar
+     * @param {boolean} [options.danger=false] - Se true, botão confirmar fica vermelho
+     * @returns {Promise<boolean>} true se confirmou, false se cancelou
+     */
+    showConfirm({ title, message, icon = 'warning', confirmText = 'Confirmar', cancelText = 'Cancelar', danger = false }) {
+        return new Promise((resolve) => {
+            const iconMap = {
+                warning: '⚠️',
+                danger: '🗑️',
+                info: 'ℹ️',
+                success: '✅'
+            };
+
+            const overlay = document.createElement('div');
+            overlay.className = 'confirm-overlay';
+            overlay.innerHTML = `
+                <div class="confirm-dialog">
+                    <div class="confirm-icon confirm-icon-${icon}">${iconMap[icon] || iconMap.warning}</div>
+                    <div class="confirm-body">
+                        <h3>${title}</h3>
+                        <p>${message}</p>
+                    </div>
+                    <div class="confirm-actions">
+                        <button class="btn confirm-btn-cancel">${cancelText}</button>
+                        <button class="btn ${danger ? 'confirm-btn-danger' : 'confirm-btn-confirm'}">${confirmText}</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const cleanup = (result) => {
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.15s';
+                setTimeout(() => overlay.remove(), 150);
+                resolve(result);
+            };
+
+            // Botão cancelar
+            overlay.querySelector('.confirm-btn-cancel').addEventListener('click', () => cleanup(false));
+
+            // Botão confirmar
+            overlay.querySelector(`.${danger ? 'confirm-btn-danger' : 'confirm-btn-confirm'}`).addEventListener('click', () => cleanup(true));
+
+            // Fechar ao clicar no fundo
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) cleanup(false);
+            });
+
+            // Fechar com Escape
+            const onKey = (e) => {
+                if (e.key === 'Escape') {
+                    document.removeEventListener('keydown', onKey);
+                    cleanup(false);
+                }
+            };
+            document.addEventListener('keydown', onKey);
+
+            // Focar no botão de cancelar para acessibilidade
+            setTimeout(() => overlay.querySelector('.confirm-btn-cancel').focus(), 100);
+        });
     },
     
     /**
-     * Exibir mensagem de sucesso
+     * Exibir mensagem de erro (compat)
+     */
+    showError(message) {
+        this.showToast(message, 'error');
+    },
+    
+    /**
+     * Exibir mensagem de sucesso (compat)
      */
     showSuccess(message) {
-        alert(message);
+        this.showToast(message, 'success');
     },
     
     /**
@@ -309,38 +429,39 @@ const View = {
             return;
         }
         
-        // Abrir em nova aba
-        const newWindow = window.open();
-        newWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${arquivo.nome}</title>
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 20px;
-                        font-family: Arial, sans-serif;
+        // Se tem URL do Storage, abrir diretamente
+        if (arquivo.url) {
+            window.open(arquivo.url, '_blank');
+            return;
+        }
+
+        // Fallback para dados base64 (compatibilidade)
+        if (arquivo.dados) {
+            const newWindow = window.open();
+            newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${arquivo.nome}</title>
+                    <style>
+                        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                        img { max-width: 100%; height: auto; }
+                        embed { width: 100%; height: 100vh; }
+                    </style>
+                </head>
+                <body>
+                    <h2>${arquivo.nome}</h2>
+                    ${arquivo.dados.startsWith('data:application/pdf') ? 
+                        `<embed src="${arquivo.dados}" type="application/pdf">` :
+                        `<img src="${arquivo.dados}" alt="${arquivo.nome}">`
                     }
-                    img {
-                        max-width: 100%;
-                        height: auto;
-                    }
-                    embed {
-                        width: 100%;
-                        height: 100vh;
-                    }
-                </style>
-            </head>
-            <body>
-                <h2>${arquivo.nome}</h2>
-                ${arquivo.dados.startsWith('data:application/pdf') ? 
-                    `<embed src="${arquivo.dados}" type="application/pdf">` :
-                    `<img src="${arquivo.dados}" alt="${arquivo.nome}">`
-                }
-            </body>
-            </html>
-        `);
+                </body>
+                </html>
+            `);
+            return;
+        }
+
+        this.showError('Não foi possível abrir o arquivo');
     },
     
     /**
@@ -565,7 +686,7 @@ const View = {
      */
     goToPage(page) {
         this.currentPage = page;
-        Controller.loadEconomias();
+        Controller.loadEconomias(); // async mas não precisamos aguardar
     },
     
     /**
