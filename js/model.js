@@ -41,6 +41,8 @@ const Model = {
             userName: row.user_name,
             tipoEconomia: row.tipo_economia,
             codigoFornecedor: row.codigo_fornecedor || '',
+            nomeFornecedor: row.nome_fornecedor || '',
+            descricaoTaxa: row.descricao_taxa || '',
             data: row.data,
             moeda: row.moeda || 'BRL',
             ptax: row.ptax ? parseFloat(row.ptax) : null,
@@ -61,6 +63,156 @@ const Model = {
             dataAprovacao: row.data_aprovacao,
             arquivos: row._arquivos || []
         };
+    },
+
+    // ===== FORNECEDORES =====
+
+    /** Cache local de fornecedores para autocomplete rápido */
+    _fornecedoresCache: null,
+    _fornecedoresCacheTime: 0,
+
+    /**
+     * Obter todos os fornecedores (com cache de 5 min)
+     */
+    async getFornecedores(forceRefresh = false) {
+        const now = Date.now();
+        if (!forceRefresh && this._fornecedoresCache && (now - this._fornecedoresCacheTime < 300000)) {
+            return this._fornecedoresCache;
+        }
+
+        const supabase = this._getClient();
+        const { data, error } = await supabase
+            .from('fornecedores')
+            .select('*')
+            .eq('ativo', true)
+            .order('nome', { ascending: true });
+
+        if (error) {
+            console.warn('[Model] Erro ao carregar fornecedores:', error);
+            return this._fornecedoresCache || [];
+        }
+
+        this._fornecedoresCache = data || [];
+        this._fornecedoresCacheTime = now;
+        return this._fornecedoresCache;
+    },
+
+    /**
+     * Buscar fornecedor por código (exata) ou nome (parcial)
+     */
+    async searchFornecedores(query) {
+        if (!query || query.length < 1) return [];
+        
+        const fornecedores = await this.getFornecedores();
+        const q = query.toLowerCase().trim();
+        
+        return fornecedores.filter(f =>
+            f.codigo.toLowerCase().includes(q) ||
+            f.nome.toLowerCase().includes(q)
+        ).slice(0, 10); // máximo 10 resultados
+    },
+
+    /**
+     * Obter fornecedor por código exato
+     */
+    async getFornecedorByCodigo(codigo) {
+        const fornecedores = await this.getFornecedores();
+        return fornecedores.find(f => f.codigo.toLowerCase() === codigo.toLowerCase()) || null;
+    },
+
+    // ===== EXPORT =====
+
+    /**
+     * Exportar economias para CSV (compatível com Excel e Power BI)
+     */
+    exportToCSV(economias, filename = 'economias') {
+        const BOM = '\uFEFF'; // BOM para Excel reconhecer UTF-8
+        const sep = ';'; // Ponto-e-vírgula para Excel BR
+
+        const headers = [
+            'Operação', 'Modal', 'Código Fornecedor', 'Nome Fornecedor',
+            'Auditor', 'Data', 'Moeda', 'PTAX', 'Ágio (%)', 'Descrição Taxa',
+            'Valor Cancelado', 'Valor BRL', 'Valor Original', 'Valor Corrigido',
+            'Valor Original BRL', 'Valor Corrigido BRL', 'Valor Economia', 'Valor Economia BRL',
+            'Status', 'Descrição', 'Observações', 'Data Criação', 'Data Aprovação'
+        ];
+
+        const rows = economias.map(e => [
+            e.tipoEconomia,
+            e.tipo,
+            e.codigoFornecedor,
+            e.nomeFornecedor || '',
+            e.userName,
+            e.data || '',
+            e.moeda,
+            e.ptax || '',
+            e.agio || 0,
+            e.descricaoTaxa || '',
+            e.valorCancelado,
+            e.valorBRL,
+            e.valorOriginal,
+            e.valorCorrigido,
+            e.valorOriginalBRL,
+            e.valorCorrigidoBRL,
+            e.valorEconomia,
+            e.valorEconomiaBRL,
+            e.status,
+            e.descricao,
+            e.observacoes,
+            e.dataCriacao ? new Date(e.dataCriacao).toLocaleString('pt-BR') : '',
+            e.dataAprovacao ? new Date(e.dataAprovacao).toLocaleString('pt-BR') : ''
+        ]);
+
+        const csvContent = BOM +
+            headers.join(sep) + '\n' +
+            rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(sep)).join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+    },
+
+    /**
+     * Exportar economias para JSON (Power BI import direto)
+     */
+    exportToJSON(economias, filename = 'economias') {
+        const exportData = economias.map(e => ({
+            operacao: e.tipoEconomia,
+            modal: e.tipo,
+            codigo_fornecedor: e.codigoFornecedor,
+            nome_fornecedor: e.nomeFornecedor || '',
+            auditor: e.userName,
+            data: e.data,
+            moeda: e.moeda,
+            ptax: e.ptax,
+            agio_pct: e.agio,
+            descricao_taxa: e.descricaoTaxa || '',
+            valor_cancelado: e.valorCancelado,
+            valor_brl: e.valorBRL,
+            valor_original: e.valorOriginal,
+            valor_corrigido: e.valorCorrigido,
+            valor_original_brl: e.valorOriginalBRL,
+            valor_corrigido_brl: e.valorCorrigidoBRL,
+            valor_economia: e.valorEconomia,
+            valor_economia_brl: e.valorEconomiaBRL,
+            status: e.status,
+            descricao: e.descricao,
+            observacoes: e.observacoes,
+            data_criacao: e.dataCriacao,
+            data_aprovacao: e.dataAprovacao
+        }));
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${filename}_${new Date().toISOString().slice(0,10)}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
     },
 
     /**
@@ -302,6 +454,8 @@ const Model = {
             user_name: currentSession.name,
             tipo_economia: 'Cancelamento',
             codigo_fornecedor: economiaData.codigoFornecedor || '',
+            nome_fornecedor: economiaData.nomeFornecedor || '',
+            descricao_taxa: economiaData.descricaoTaxa || '',
             data: economiaData.data,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
@@ -367,6 +521,8 @@ const Model = {
             user_name: currentSession.name,
             tipo_economia: 'Correção',
             codigo_fornecedor: economiaData.codigoFornecedor || '',
+            nome_fornecedor: economiaData.nomeFornecedor || '',
+            descricao_taxa: economiaData.descricaoTaxa || '',
             data: economiaData.data,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
@@ -463,14 +619,19 @@ const Model = {
         let query = supabase
             .from('economias')
             .select('*')
-            .order('data_criacao', { ascending: false });
+            .order('data', { ascending: false });
 
         // Filtrar por usuário
         if (filters.userId) {
             query = query.eq('user_id', filters.userId);
         }
 
-        // Filtrar por tipo
+        // Filtrar por tipo de operação (Cancelamento / Correção)
+        if (filters.tipoEconomia) {
+            query = query.eq('tipo_economia', filters.tipoEconomia);
+        }
+
+        // Filtrar por tipo de câmbio (BID / Cotação)
         if (filters.tipo) {
             query = query.eq('tipo', filters.tipo);
         }
@@ -480,16 +641,14 @@ const Model = {
             query = query.eq('status', filters.status);
         }
 
-        // Filtrar por data de início
+        // Filtrar por data de início (usa coluna 'data' = data da operação)
         if (filters.dataInicio) {
-            query = query.gte('data_criacao', filters.dataInicio);
+            query = query.gte('data', filters.dataInicio);
         }
 
         // Filtrar por data de fim
         if (filters.dataFim) {
-            const dataFim = new Date(filters.dataFim);
-            dataFim.setHours(23, 59, 59, 999);
-            query = query.lte('data_criacao', dataFim.toISOString());
+            query = query.lte('data', filters.dataFim);
         }
 
         const { data, error } = await query;

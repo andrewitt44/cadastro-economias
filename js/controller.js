@@ -116,7 +116,11 @@ const Controller = {
                     economias = await Model.getEconomias();
                 }
             } else {
+                // Auditor: buscar apenas as próprias economias e filtrar cliente-side
                 economias = await Model.getEconomiasByUser(currentUser.id);
+                if (filters && economias) {
+                    economias = this._applyFiltersClientSide(economias, filters);
+                }
             }
         } catch (error) {
             console.error('[Controller] Erro ao carregar economias:', error);
@@ -283,6 +287,156 @@ const Controller = {
         if (btnPrevPage) btnPrevPage.addEventListener('click', () => View.previousPage());
         if (btnNextPage) btnNextPage.addEventListener('click', () => View.nextPage());
         if (btnLastPage) btnLastPage.addEventListener('click', () => View.goToLastPage());
+
+        // Export buttons
+        const btnExportCSV = document.getElementById('btnExportCSV');
+        const btnExportJSON = document.getElementById('btnExportJSON');
+        if (btnExportCSV) {
+            btnExportCSV.addEventListener('click', () => {
+                if (View.allEconomias && View.allEconomias.length > 0) {
+                    Model.exportToCSV(View.allEconomias);
+                    View.showToast('Exportação CSV iniciada!', 'success');
+                } else {
+                    View.showToast('Nenhuma economia para exportar', 'error');
+                }
+            });
+        }
+        if (btnExportJSON) {
+            btnExportJSON.addEventListener('click', () => {
+                if (View.allEconomias && View.allEconomias.length > 0) {
+                    Model.exportToJSON(View.allEconomias);
+                    View.showToast('Exportação JSON iniciada!', 'success');
+                } else {
+                    View.showToast('Nenhuma economia para exportar', 'error');
+                }
+            });
+        }
+
+        // Fornecedor autocomplete (Cancelamento + Correção)
+        this._setupFornecedorAutocomplete('canc');
+        this._setupFornecedorAutocomplete('corr');
+    },
+
+    /**
+     * Configurar autocomplete de fornecedor para um prefixo (canc ou corr)
+     */
+    _setupFornecedorAutocomplete(prefix) {
+        const input = document.getElementById(`${prefix}_codigoFornecedor`);
+        const dropdown = document.getElementById(`${prefix}_fornecedorDropdown`);
+        const nomeHidden = document.getElementById(`${prefix}_nomeFornecedor`);
+        const infoDiv = document.getElementById(`${prefix}_fornecedorInfo`);
+        const nomeDisplay = document.getElementById(`${prefix}_fornecedorNomeDisplay`);
+        const agioInput = document.getElementById(`${prefix}_agio`);
+        const agioHint = document.getElementById(`${prefix}_agioHint`);
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let selectedIndex = -1;
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                const query = input.value.trim();
+                if (query.length < 1) {
+                    dropdown.classList.remove('show');
+                    return;
+                }
+
+                const results = await Model.searchFornecedores(query);
+                selectedIndex = -1;
+
+                if (results.length === 0) {
+                    dropdown.innerHTML = `
+                        <div class="autocomplete-item ac-empty">
+                            Nenhum fornecedor encontrado para "<strong>${query}</strong>"
+                        </div>`;
+                } else {
+                    dropdown.innerHTML = results.map((f, i) => `
+                        <div class="autocomplete-item" data-index="${i}" data-codigo="${f.codigo}" data-nome="${f.nome}" data-agio="${f.agio || 0}">
+                            <span class="ac-code">${f.codigo}</span>
+                            <span class="ac-name">${f.nome}</span>
+                            ${f.agio ? `<span class="ac-agio">Ágio: ${f.agio}%</span>` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                dropdown.classList.add('show');
+
+                // Click handlers for items
+                dropdown.querySelectorAll('.autocomplete-item:not(.ac-new)').forEach(item => {
+                    item.addEventListener('click', () => {
+                        this._selectFornecedor(prefix, {
+                            codigo: item.dataset.codigo,
+                            nome: item.dataset.nome,
+                            agio: parseFloat(item.dataset.agio) || 0
+                        });
+                        dropdown.classList.remove('show');
+                    });
+                });
+
+            }, 200);
+        });
+
+        // Keyboard navigation
+        input.addEventListener('keydown', (e) => {
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            if (!dropdown.classList.contains('show') || items.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                items.forEach((el, i) => el.classList.toggle('active', i === selectedIndex));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                items.forEach((el, i) => el.classList.toggle('active', i === selectedIndex));
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                items[selectedIndex].click();
+            } else if (e.key === 'Escape') {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    },
+
+    /**
+     * Selecionar fornecedor do autocomplete
+     */
+    _selectFornecedor(prefix, fornecedor) {
+        const input = document.getElementById(`${prefix}_codigoFornecedor`);
+        const nomeHidden = document.getElementById(`${prefix}_nomeFornecedor`);
+        const infoDiv = document.getElementById(`${prefix}_fornecedorInfo`);
+        const nomeDisplay = document.getElementById(`${prefix}_fornecedorNomeDisplay`);
+        const agioInput = document.getElementById(`${prefix}_agio`);
+        const agioHint = document.getElementById(`${prefix}_agioHint`);
+        input.value = fornecedor.codigo;
+        if (nomeHidden) nomeHidden.value = fornecedor.nome;
+
+        // Mostrar nome do fornecedor
+        if (infoDiv && nomeDisplay) {
+            nomeDisplay.textContent = `🏢 ${fornecedor.nome}`;
+            infoDiv.style.display = 'block';
+        }
+
+        // Auto-preencher ágio (editável)
+        if (agioInput && fornecedor.agio) {
+            agioInput.value = fornecedor.agio;
+            if (agioHint) agioHint.textContent = `Ágio padrão do fornecedor: ${fornecedor.agio}%`;
+        }
+
+        // Recalcular se necessário
+        if (prefix === 'canc') {
+            this.calculateConversion(prefix);
+        } else {
+            this.handleValorChange(prefix);
+        }
     },
     
     /**
@@ -486,6 +640,8 @@ const Controller = {
         
         try {
             const codigoFornecedor = document.getElementById('canc_codigoFornecedor').value;
+            const nomeFornecedor = document.getElementById('canc_nomeFornecedor').value || '';
+            const descricaoTaxa = document.getElementById('canc_descricaoTaxa').value || '';
             const data = document.getElementById('canc_data').value;
             const moeda = document.getElementById('canc_moeda').value;
             const agio = parseFloat(document.getElementById('canc_agio').value) || 0;
@@ -532,8 +688,8 @@ const Controller = {
                     return;
                 }
                 
-                if (arquivo.size > 5 * 1024 * 1024) {
-                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 5MB`, 'error');
+                if (arquivo.size > 50 * 1024 * 1024) {
+                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 50MB`, 'error');
                     return;
                 }
                 
@@ -554,6 +710,8 @@ const Controller = {
             const economiaData = {
                 tipoEconomia: 'Cancelamento',
                 codigoFornecedor,
+                nomeFornecedor,
+                descricaoTaxa,
                 data,
                 moeda,
                 ptax,
@@ -597,6 +755,8 @@ const Controller = {
         
         try {
             const codigoFornecedor = document.getElementById('corr_codigoFornecedor').value;
+            const nomeFornecedor = document.getElementById('corr_nomeFornecedor').value || '';
+            const descricaoTaxa = document.getElementById('corr_descricaoTaxa').value || '';
             const data = document.getElementById('corr_data').value;
             const moeda = document.getElementById('corr_moeda').value;
             const agio = parseFloat(document.getElementById('corr_agio').value) || 0;
@@ -643,8 +803,8 @@ const Controller = {
                     return;
                 }
                 
-                if (arquivo.size > 5 * 1024 * 1024) {
-                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 5MB`, 'error');
+                if (arquivo.size > 50 * 1024 * 1024) {
+                    View.showToast(`Arquivo "${arquivo.name}" muito grande. Máximo 50MB`, 'error');
                     return;
                 }
                 
@@ -664,6 +824,8 @@ const Controller = {
             const economiaData = {
                 tipoEconomia: 'Correção',
                 codigoFornecedor,
+                nomeFornecedor,
+                descricaoTaxa,
                 data,
                 moeda,
                 ptax,
@@ -698,9 +860,24 @@ const Controller = {
     /**
      * Aplicar filtros
      */
+    /**
+     * Aplicar filtros cliente-side (usado para auditores)
+     */
+    _applyFiltersClientSide(economias, filters) {
+        return economias.filter(e => {
+            if (filters.tipoEconomia && e.tipoEconomia !== filters.tipoEconomia) return false;
+            if (filters.tipo && e.tipo !== filters.tipo) return false;
+            if (filters.status && e.status !== filters.status) return false;
+            if (filters.dataInicio && e.data < filters.dataInicio) return false;
+            if (filters.dataFim && e.data > filters.dataFim) return false;
+            return true;
+        });
+    },
+
     async applyFilters() {
         const filters = {
             userId: document.getElementById('filtroUsuario').value,
+            tipoEconomia: document.getElementById('filtroTipoEconomia') ? document.getElementById('filtroTipoEconomia').value : '',
             tipo: document.getElementById('filtroTipo').value,
             status: document.getElementById('filtroStatus').value,
             dataInicio: document.getElementById('filtroDataInicio').value,

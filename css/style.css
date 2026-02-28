@@ -429,7 +429,20 @@ body {
     flex-wrap: wrap;
     gap: 10px;
     flex: 1;
-    align-items: center;
+    align-items: flex-end;
+}
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding-left: 2px;
 }
 .filter-select,
 .filter-input {
@@ -1011,6 +1024,98 @@ body {
 .text-center { text-align: center; }
 .mt-16 { margin-top: 16px; }
 .mb-16 { margin-bottom: 16px; }
+
+/* ===== AUTOCOMPLETE FORNECEDOR ===== */
+.fornecedor-autocomplete-wrapper {
+    position: relative;
+}
+.autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    max-height: 240px;
+    overflow-y: auto;
+}
+.autocomplete-dropdown.show { display: block; }
+.autocomplete-item {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--gray-100);
+    transition: background 0.1s;
+}
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover, .autocomplete-item.active {
+    background: var(--primary-light);
+}
+.autocomplete-item .ac-code {
+    font-weight: 600;
+    color: var(--primary);
+    font-family: monospace;
+    font-size: 12px;
+}
+.autocomplete-item .ac-name {
+    color: var(--text-primary);
+    flex: 1;
+    margin-left: 8px;
+}
+.autocomplete-item .ac-agio {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.autocomplete-item.ac-new {
+    background: var(--gray-50);
+    font-style: italic;
+    color: var(--text-secondary);
+}
+.autocomplete-item.ac-new:hover {
+    background: var(--primary-50);
+}
+.fornecedor-info {
+    margin-top: 6px;
+}
+.fornecedor-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-light);
+    color: var(--primary-700);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* ===== TABLE HEADER WITH EXPORT ===== */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.export-buttons {
+    display: flex;
+    gap: 6px;
+}
 
 /* Page load animation */
 .page-loading {

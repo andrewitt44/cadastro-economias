@@ -107,7 +107,7 @@ const View = {
                 <tr>
                     <td>${economia.tipoEconomia || 'Correção'}</td>
                     <td>${economia.tipo || '-'}</td>
-                    <td>${economia.codigoFornecedor || '-'}</td>
+                    <td title="${economia.codigoFornecedor || ''}">${economia.nomeFornecedor || economia.codigoFornecedor || '-'}</td>
                     <td>${economia.userName || '-'}</td>
                     <td>${Model.formatCurrency(valorExibir)}</td>
                     <td>${moeda}</td>
@@ -469,6 +469,8 @@ const View = {
      */
     clearFilters() {
         document.getElementById('filtroUsuario').value = '';
+        const filtroTipoEconomia = document.getElementById('filtroTipoEconomia');
+        if (filtroTipoEconomia) filtroTipoEconomia.value = '';
         document.getElementById('filtroTipo').value = '';
         document.getElementById('filtroStatus').value = '';
         document.getElementById('filtroDataInicio').value = '';
@@ -504,6 +506,15 @@ const View = {
         
         if (modal && form) {
             form.reset();
+            // Limpar badge do fornecedor
+            const infoDiv = document.getElementById('canc_fornecedorInfo');
+            const nomeDisplay = document.getElementById('canc_fornecedorNomeDisplay');
+            const nomeHidden = document.getElementById('canc_nomeFornecedor');
+            const agioHint = document.getElementById('canc_agioHint');
+            if (infoDiv) infoDiv.style.display = 'none';
+            if (nomeDisplay) nomeDisplay.textContent = '';
+            if (nomeHidden) nomeHidden.value = '';
+            if (agioHint) agioHint.textContent = '';
             modal.style.display = 'flex';
         }
     },
@@ -527,6 +538,15 @@ const View = {
         
         if (modal && form) {
             form.reset();
+            // Limpar badge do fornecedor
+            const infoDiv = document.getElementById('corr_fornecedorInfo');
+            const nomeDisplay = document.getElementById('corr_fornecedorNomeDisplay');
+            const nomeHidden = document.getElementById('corr_nomeFornecedor');
+            const agioHint = document.getElementById('corr_agioHint');
+            if (infoDiv) infoDiv.style.display = 'none';
+            if (nomeDisplay) nomeDisplay.textContent = '';
+            if (nomeHidden) nomeHidden.value = '';
+            if (agioHint) agioHint.textContent = '';
             modal.style.display = 'flex';
         }
     },
@@ -571,7 +591,10 @@ const View = {
         }
         
         // Seção Cotação
-        document.getElementById('detalheFornecedor').textContent = economia.codigoFornecedor || '-';
+        const fornecedorDisplay = economia.nomeFornecedor 
+            ? `${economia.nomeFornecedor} (${economia.codigoFornecedor})`
+            : economia.codigoFornecedor || '-';
+        document.getElementById('detalheFornecedor').textContent = fornecedorDisplay;
         document.getElementById('detalheAuditor').textContent = economia.userName || '-';
         document.getElementById('detalheData').textContent = Model.formatDate(economia.data || economia.dataCriacao);
         document.getElementById('detalheMoeda').textContent = economia.moeda || 'BRL';
