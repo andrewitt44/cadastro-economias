@@ -280,6 +280,8 @@
                 if (msg.includes('Email not confirmed')) msg = 'E-mail ainda não confirmado. Verifique sua caixa de entrada.';
                 if (msg.includes('User already registered')) msg = 'Este e-mail já está cadastrado. Tente fazer login.';
                 if (msg.includes('Password should be at least')) msg = 'A senha deve ter pelo menos 6 caracteres.';
+                if (msg.includes('rate limit') || msg.includes('429') || error?.status === 429)
+                    msg = 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
                 showError(isSignUp ? 'Erro ao cadastrar' : 'Erro ao fazer login', msg, '');
             } finally {
                 btn.disabled = false;
