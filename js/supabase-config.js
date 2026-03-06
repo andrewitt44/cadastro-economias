@@ -39,9 +39,20 @@ if (!_createClient) {
 
     /**
      * Verificar se usuário está autenticado
+     * Valida a sessão com o servidor para evitar loop com contas deletadas
      */
     async function checkAuth() {
         const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return null;
+
+        // Confirma que o usuário ainda existe no servidor (não apenas no storage local)
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) {
+            // Sessão inválida (ex: conta deletada) — limpar localmente
+            await supabase.auth.signOut();
+            return null;
+        }
+
         return session;
     }
 
@@ -211,12 +222,39 @@ if (!_createClient) {
         }
     }
 
+    /**
+     * Login com e-mail e senha
+     */
+    async function loginWithEmail(email, password) {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Cadastro com e-mail e senha
+     * O Supabase envia automaticamente um e-mail de confirmação
+     */
+    async function signUpWithEmail(email, password) {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: window.location.origin + '/dashboard.html'
+            }
+        });
+        if (error) throw error;
+        return data;
+    }
+
     // Exportar configuração global
     window.SupabaseConfig = {
         client: supabase,
         bucket: STORAGE_BUCKET,
         checkAuth,
         getCurrentUser,
+        loginWithEmail,
+        signUpWithEmail,
         loginWithMicrosoft,
         loginWithGoogle,
         logout,
