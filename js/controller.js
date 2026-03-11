@@ -4,6 +4,11 @@
  * Autenticação via Supabase (Google/Microsoft OAuth)
  */
 
+// Aceita vírgula ou ponto como separador decimal
+function parseVal(v) {
+    return parseFloat(String(v || '').replace(',', '.')) || 0;
+}
+
 const Controller = {
     _currentUser: null,
 
@@ -550,9 +555,9 @@ const Controller = {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
         
         if (moeda === 'USD') {
-            const valorUSD = parseFloat(document.getElementById(`${prefix}_valorCancelado`).value) || 0;
+            const valorUSD = parseVal(document.getElementById(`${prefix}_valorCancelado`).value);
             const ptax = parseFloat(document.getElementById(`${prefix}_ptax`).value) || 0;
-            const agio = parseFloat(document.getElementById(`${prefix}_agio`).value) || 0;
+            const agio = parseVal(document.getElementById(`${prefix}_agio`).value);
             
             if (valorUSD && ptax) {
                 // Aplicar ágio: valor * (1 + agio/100)
@@ -612,8 +617,8 @@ const Controller = {
         const useDesconto = document.getElementById('corr_useDesconto').checked;
         
         if (useDesconto) {
-            const valorOriginal = parseFloat(document.getElementById('corr_valorOriginal').value) || 0;
-            const desconto = parseFloat(document.getElementById('corr_desconto').value) || 0;
+            const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
+            const desconto = parseVal(document.getElementById('corr_desconto').value);
             
             if (valorOriginal > 0 && desconto >= 0 && desconto <= 100) {
                 // Calcular: valorCorrigido = valorOriginal * (1 - desconto/100)
@@ -644,8 +649,8 @@ const Controller = {
             const descricaoTaxa = document.getElementById('canc_descricaoTaxa').value || '';
             const data = document.getElementById('canc_data').value;
             const moeda = document.getElementById('canc_moeda').value;
-            const agio = parseFloat(document.getElementById('canc_agio').value) || 0;
-            const valorCancelado = parseFloat(document.getElementById('canc_valorCancelado').value);
+            const agio = parseVal(document.getElementById('canc_agio').value);
+            const valorCancelado = parseVal(document.getElementById('canc_valorCancelado').value);
             const tipo = document.getElementById('canc_tipo').value;
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
@@ -759,9 +764,9 @@ const Controller = {
             const descricaoTaxa = document.getElementById('corr_descricaoTaxa').value || '';
             const data = document.getElementById('corr_data').value;
             const moeda = document.getElementById('corr_moeda').value;
-            const agio = parseFloat(document.getElementById('corr_agio').value) || 0;
-            const valorOriginal = parseFloat(document.getElementById('corr_valorOriginal').value);
-            const valorCorrigido = parseFloat(document.getElementById('corr_valorCorrigido').value);
+            const agio = parseVal(document.getElementById('corr_agio').value);
+            const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
+            const valorCorrigido = parseVal(document.getElementById('corr_valorCorrigido').value);
             const tipo = document.getElementById('corr_tipo').value;
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');

@@ -205,8 +205,7 @@
                     
                     <div class="form-group" id="canc_agioGroup" style="display: none;">
                         <label for="canc_agio">Ágio (%)</label>
-                        <input type="number" id="canc_agio" name="agio" 
-                               step="0.01" min="0" value="0">
+                        <input type="text" inputmode="decimal" id="canc_agio" name="agio" value="0">
                         <small class="form-help" id="canc_agioHint"></small>
                     </div>
                     
@@ -227,8 +226,7 @@
                     
                     <div class="form-group">
                         <label for="canc_valorCancelado"><span id="canc_moedaLabel">Valor Cancelado (BRL)</span> *</label>
-                        <input type="number" id="canc_valorCancelado" name="valorCancelado" 
-                               step="0.01" min="0" required>
+                        <input type="text" inputmode="decimal" id="canc_valorCancelado" name="valorCancelado" required>
                     </div>
                     
                     <div class="form-group" id="canc_ptaxGroup" style="display: none;">
@@ -309,8 +307,7 @@
                     
                     <div class="form-group" id="corr_agioGroup" style="display: none;">
                         <label for="corr_agio">Ágio (%)</label>
-                        <input type="number" id="corr_agio" name="agio" 
-                               step="0.01" min="0" value="0">
+                        <input type="text" inputmode="decimal" id="corr_agio" name="agio" value="0">
                         <small class="form-help" id="corr_agioHint"></small>
                     </div>
                     
@@ -337,8 +334,7 @@
                     
                     <div class="form-group">
                         <label for="corr_valorOriginal"><span id="corr_moedaLabelOriginal">Valor Original (BRL)</span> *</label>
-                        <input type="number" id="corr_valorOriginal" name="valorOriginal" 
-                               step="0.01" min="0" required>
+                        <input type="text" inputmode="decimal" id="corr_valorOriginal" name="valorOriginal" required>
                     </div>
                     
                     <div class="form-group">
@@ -350,14 +346,12 @@
                     
                     <div class="form-group" id="corr_descontoGroup" style="display: none;">
                         <label for="corr_desconto">Desconto (%)</label>
-                        <input type="number" id="corr_desconto" name="desconto" 
-                               step="0.01" min="0" max="100" value="0">
+                        <input type="text" inputmode="decimal" id="corr_desconto" name="desconto" value="0">
                     </div>
                     
                     <div class="form-group">
                         <label for="corr_valorCorrigido"><span id="corr_moedaLabelCorrigido">Valor Corrigido (BRL)</span> *</label>
-                        <input type="number" id="corr_valorCorrigido" name="valorCorrigido" 
-                               step="0.01" min="0" required>
+                        <input type="text" inputmode="decimal" id="corr_valorCorrigido" name="valorCorrigido" required>
                     </div>
                     
                     <div class="form-group">

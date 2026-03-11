@@ -565,8 +565,9 @@ const View = {
      * Calcular e atualizar valor da economia no formulário de correção
      */
     updateEconomiaValueCorrecao() {
-        const valorOriginal = parseFloat(document.getElementById('corr_valorOriginal').value) || 0;
-        const valorCorrigido = parseFloat(document.getElementById('corr_valorCorrigido').value) || 0;
+        const parseVal = v => parseFloat(String(v || '').replace(',', '.')) || 0;
+        const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
+        const valorCorrigido = parseVal(document.getElementById('corr_valorCorrigido').value);
         const valorEconomia = valorOriginal - valorCorrigido;
         
         document.getElementById('corr_valorEconomia').value = valorEconomia.toFixed(2);
