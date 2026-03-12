@@ -98,8 +98,13 @@ const View = {
             
             const canApprove = userRole === 'gestor' && economia.status === 'Pendente';
             
-            // Sempre usar valorEconomia que já está em BRL
-            const valorExibir = parseFloat(economia.valorEconomia) || 0;
+            // Usar valorEconomiaBRL para exibição no dashboard (sempre em BRL)
+            let valorExibir = 0;
+            if (economia.tipoEconomia === 'Cancelamento') {
+                valorExibir = parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorBRL) || parseFloat(economia.valorCancelado) || 0;
+            } else {
+                valorExibir = parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorEconomia) || 0;
+            }
             
             const moeda = economia.moeda || 'BRL';
             
@@ -603,12 +608,19 @@ const View = {
         document.getElementById('detalheAgio').textContent = economia.agio ? `${economia.agio}%` : '0%';
         document.getElementById('detalheTipoEconomia').textContent = economia.tipoEconomia || '-';
         
-        // Sempre usar valorEconomia que já está em BRL
-        const valorBRLExibir = parseFloat(economia.valorEconomia) || 0;
+        // Usar valorEconomiaBRL para o header de detalhes
+        let valorBRLExibir = 0;
+        if (economia.tipoEconomia === 'Cancelamento') {
+            valorBRLExibir = parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorBRL) || parseFloat(economia.valorCancelado) || 0;
+        } else {
+            valorBRLExibir = parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorEconomia) || 0;
+        }
         document.getElementById('detalheValorBRL').textContent = Model.formatCurrency(valorBRLExibir);
         
         // Seção Detalhes - Criar tabela de itens
         const detalheItens = document.getElementById('detalheItens');
+        const totalMoedaLabel = document.getElementById('totalMoedaLabel');
+        if (totalMoedaLabel) totalMoedaLabel.textContent = economia.moeda || 'BRL';
         if (economia.tipoEconomia === 'Cancelamento') {
             const moeda = economia.moeda || 'BRL';
             const ptax = economia.ptax || 1;
@@ -627,16 +639,17 @@ const View = {
                 </tr>
             `;
             document.getElementById('totalBRL').textContent = Model.formatCurrency(valorBRL);
-            document.getElementById('totalUSD').textContent = moeda === 'USD' ? valor.toFixed(2) : '0.00';
+            document.getElementById('totalUSD').textContent = moeda !== 'BRL' ? valor.toFixed(2) : '0.00';
         } else {
             const moeda = economia.moeda || 'BRL';
             const ptax = economia.ptax || 1;
             const valorOriginal = economia.valorOriginal;
             const valorCorrigido = economia.valorCorrigido;
-            const valorEconomia = economia.valorEconomia;
+            // Calcular economia na moeda original a partir dos valores originais
+            const economiaMoedaOriginal = valorOriginal - valorCorrigido;
             const valorOriginalBRL = economia.valorOriginalBRL || valorOriginal;
             const valorCorrigidoBRL = economia.valorCorrigidoBRL || valorCorrigido;
-            const valorEconomiaBRL = economia.valorEconomiaBRL || valorEconomia;
+            const valorEconomiaBRL = valorOriginalBRL - valorCorrigidoBRL;
             
             detalheItens.innerHTML = `
                 <tr>
@@ -659,16 +672,16 @@ const View = {
                 </tr>
                 <tr style="background-color: #d1fae5;">
                     <td><strong>Economia</strong></td>
-                    <td><strong>${valorEconomia.toFixed(2)}</strong></td>
+                    <td><strong>${economiaMoedaOriginal.toFixed(2)}</strong></td>
                     <td>0.00</td>
                     <td>${moeda}</td>
                     <td>${ptax.toFixed(4)}</td>
-                    <td><strong>${valorEconomia.toFixed(2)}</strong></td>
+                    <td><strong>${economiaMoedaOriginal.toFixed(2)}</strong></td>
                     <td><strong>${Model.formatCurrency(valorEconomiaBRL)}</strong></td>
                 </tr>
             `;
             document.getElementById('totalBRL').textContent = Model.formatCurrency(valorEconomiaBRL);
-            document.getElementById('totalUSD').textContent = moeda === 'USD' ? valorEconomia.toFixed(2) : '0.00';
+            document.getElementById('totalUSD').textContent = moeda !== 'BRL' ? economiaMoedaOriginal.toFixed(2) : '0.00';
         }
         
         // Descrição

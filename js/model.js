@@ -129,39 +129,52 @@ const Model = {
         const BOM = '\uFEFF'; // BOM para Excel reconhecer UTF-8
         const sep = ';'; // Ponto-e-vírgula para Excel BR
 
+        // Formatar número para CSV brasileiro (vírgula como decimal)
+        const fmtNum = (v) => {
+            if (v === null || v === undefined || v === '') return '';
+            return String(Number(v)).replace('.', ',');
+        };
+
         const headers = [
             'Operação', 'Modal', 'Código Fornecedor', 'Nome Fornecedor',
             'Auditor', 'Data', 'Moeda', 'PTAX', 'Ágio (%)', 'Descrição Taxa',
-            'Valor Cancelado', 'Valor BRL', 'Valor Original', 'Valor Corrigido',
+            'Valor Original', 'Valor Corrigido',
             'Valor Original BRL', 'Valor Corrigido BRL', 'Valor Economia', 'Valor Economia BRL',
             'Status', 'Descrição', 'Observações', 'Data Criação', 'Data Aprovação'
         ];
 
-        const rows = economias.map(e => [
-            e.tipoEconomia,
-            e.tipo,
-            e.codigoFornecedor,
-            e.nomeFornecedor || '',
-            e.userName,
-            e.data || '',
-            e.moeda,
-            e.ptax || '',
-            e.agio || 0,
-            e.descricaoTaxa || '',
-            e.valorCancelado,
-            e.valorBRL,
-            e.valorOriginal,
-            e.valorCorrigido,
-            e.valorOriginalBRL,
-            e.valorCorrigidoBRL,
-            e.valorEconomia,
-            e.valorEconomiaBRL,
-            e.status,
-            e.descricao,
-            e.observacoes,
-            e.dataCriacao ? new Date(e.dataCriacao).toLocaleString('pt-BR') : '',
-            e.dataAprovacao ? new Date(e.dataAprovacao).toLocaleString('pt-BR') : ''
-        ]);
+        const rows = economias.map(e => {
+            // Para cancelamento, usar valorCancelado como Valor Original
+            const valorOrigCSV = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : e.valorOriginal;
+            const valorOrigBRLCSV = e.tipoEconomia === 'Cancelamento' ? e.valorBRL : e.valorOriginalBRL;
+            // Valor economia na moeda original
+            const valorEconomiaCSV = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : (e.valorOriginal - e.valorCorrigido);
+            const valorEconomiaBRLCSV = e.tipoEconomia === 'Cancelamento' ? e.valorBRL : (e.valorOriginalBRL - e.valorCorrigidoBRL);
+
+            return [
+                e.tipoEconomia,
+                e.tipo,
+                e.codigoFornecedor,
+                e.nomeFornecedor || '',
+                e.userName,
+                e.data || '',
+                e.moeda,
+                fmtNum(e.ptax),
+                fmtNum(e.agio || 0),
+                e.descricaoTaxa || '',
+                fmtNum(valorOrigCSV),
+                fmtNum(e.tipoEconomia === 'Cancelamento' ? 0 : e.valorCorrigido),
+                fmtNum(valorOrigBRLCSV),
+                fmtNum(e.tipoEconomia === 'Cancelamento' ? 0 : e.valorCorrigidoBRL),
+                fmtNum(valorEconomiaCSV),
+                fmtNum(valorEconomiaBRLCSV),
+                e.status,
+                e.descricao,
+                e.observacoes,
+                e.dataCriacao ? new Date(e.dataCriacao).toLocaleString('pt-BR') : '',
+                e.dataAprovacao ? new Date(e.dataAprovacao).toLocaleString('pt-BR') : ''
+            ];
+        });
 
         const csvContent = BOM +
             headers.join(sep) + '\n' +
@@ -464,7 +477,7 @@ const Model = {
             valor_brl: valorBRL,
             valor_original: 0,
             valor_corrigido: 0,
-            valor_economia: valorBRL,
+            valor_economia: valorCancelado,
             valor_economia_brl: valorBRL,
             tipo: economiaData.tipo,
             descricao: economiaData.descricao || '',
@@ -531,7 +544,7 @@ const Model = {
             valor_corrigido: valorCorrigido,
             valor_original_brl: valorOriginalBRL,
             valor_corrigido_brl: valorCorrigidoBRL,
-            valor_economia: valorEconomiaBRL,
+            valor_economia: valorEconomia,
             valor_economia_brl: valorEconomiaBRL,
             valor_cancelado: 0,
             valor_brl: 0,

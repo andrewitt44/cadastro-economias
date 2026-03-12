@@ -209,6 +209,7 @@ const Controller = {
             document.getElementById('canc_data').addEventListener('change', () => this.handleDataChange('canc'));
             document.getElementById('canc_agio').addEventListener('input', () => this.calculateConversion('canc'));
             document.getElementById('canc_valorCancelado').addEventListener('input', () => this.calculateConversion('canc'));
+            document.getElementById('canc_ptax').addEventListener('input', () => this.calculateConversion('canc'));
         }
         
         // Modal de Correção
@@ -237,6 +238,7 @@ const Controller = {
             document.getElementById('corr_moeda').addEventListener('change', () => this.handleMoedaChange('corr'));
             document.getElementById('corr_data').addEventListener('change', () => this.handleDataChange('corr'));
             document.getElementById('corr_agio').addEventListener('input', () => this.handleValorChange('corr'));
+            document.getElementById('corr_ptax').addEventListener('input', () => this.handleValorChange('corr'));
         }
         
         // Filtros (apenas gestor)
@@ -447,28 +449,40 @@ const Controller = {
     /**
      * Buscar PTAX do BACEN
      */
-    async fetchPTAX(date) {
+    // Mapeamento de códigos ISO para códigos BACEN PTAX
+    _bacenMoedaMap: {
+        'USD': 'USD',
+        'EUR': 'EUR',
+        'GBP': 'GBP',
+        'CHF': 'CHF',
+        'CAD': 'CAD',
+        'SEK': 'SEK',
+        'CNY': 'CNY',
+        'AED': 'AED'
+    },
+
+    async fetchPTAX(date, moeda = 'USD') {
         try {
+            const bacenCodigo = this._bacenMoedaMap[moeda] || moeda;
+            
             // Formatar data para API do BACEN (MM-DD-YYYY)
             const [year, month, day] = date.split('-');
             const formattedDate = `${month}-${day}-${year}`;
             
-            // API do BACEN para cotação dólar
-            const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarDia(dataCotacao=@dataCotacao)?@dataCotacao='${formattedDate}'&$format=json`;
+            const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${encodeURIComponent(bacenCodigo)}'&@dataCotacao='${formattedDate}'&$format=json`;
             
             const response = await fetch(url);
             const data = await response.json();
             
             if (data.value && data.value.length > 0) {
-                // Pegar cotação de venda
                 return data.value[0].cotacaoVenda;
             } else {
-                View.showToast('Não foi encontrada cotação PTAX para esta data. Verifique se é dia útil.', 'error');
+                View.showToast(`Cotação PTAX não encontrada para ${moeda} nesta data. Você pode digitar o valor manualmente.`, 'warning');
                 return null;
             }
         } catch (error) {
             console.error('Erro ao buscar PTAX:', error);
-            View.showToast('Erro ao buscar cotação PTAX. Por favor, tente novamente.', 'error');
+            View.showToast('Erro ao buscar cotação PTAX. Você pode digitar o valor manualmente.', 'warning');
             return null;
         }
     },
@@ -481,16 +495,18 @@ const Controller = {
         const agioGroup = document.getElementById(`${prefix}_agioGroup`);
         const ptaxGroup = document.getElementById(`${prefix}_ptaxGroup`);
         const moedaLabel = document.getElementById(`${prefix}_moedaLabel`);
+        const ptaxLabel = document.getElementById(`${prefix}_ptaxLabel`);
+        const isForeign = moeda !== 'BRL';
         
         if (prefix === 'corr') {
             const moedaLabelOriginal = document.getElementById(`${prefix}_moedaLabelOriginal`);
             const moedaLabelCorrigido = document.getElementById(`${prefix}_moedaLabelCorrigido`);
             const moedaLabelEconomia = document.getElementById(`${prefix}_moedaLabelEconomia`);
             
-            if (moeda === 'USD') {
-                moedaLabelOriginal.textContent = 'Valor Original (USD)';
-                moedaLabelCorrigido.textContent = 'Valor Corrigido (USD)';
-                moedaLabelEconomia.textContent = 'Valor da Economia (USD)';
+            if (isForeign) {
+                moedaLabelOriginal.textContent = `Valor Original (${moeda})`;
+                moedaLabelCorrigido.textContent = `Valor Corrigido (${moeda})`;
+                moedaLabelEconomia.textContent = `Valor da Economia (${moeda})`;
             } else {
                 moedaLabelOriginal.textContent = 'Valor Original (BRL)';
                 moedaLabelCorrigido.textContent = 'Valor Corrigido (BRL)';
@@ -498,10 +514,11 @@ const Controller = {
             }
         }
         
-        if (moeda === 'USD') {
+        if (isForeign) {
             agioGroup.style.display = 'block';
             ptaxGroup.style.display = 'block';
-            if (moedaLabel) moedaLabel.textContent = 'Valor Cancelado (USD)';
+            if (moedaLabel) moedaLabel.textContent = `Valor Cancelado (${moeda})`;
+            if (ptaxLabel) ptaxLabel.textContent = `PTAX (${moeda})`;
             
             // Buscar PTAX se data já estiver preenchida
             const data = document.getElementById(`${prefix}_data`).value;
@@ -533,8 +550,8 @@ const Controller = {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
         const data = document.getElementById(`${prefix}_data`).value;
         
-        if (moeda === 'USD' && data) {
-            const ptax = await this.fetchPTAX(data);
+        if (moeda !== 'BRL' && data) {
+            const ptax = await this.fetchPTAX(data, moeda);
             if (ptax) {
                 document.getElementById(`${prefix}_ptax`).value = ptax.toFixed(4);
                 
@@ -554,14 +571,14 @@ const Controller = {
     calculateConversion(prefix) {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
         
-        if (moeda === 'USD') {
-            const valorUSD = parseVal(document.getElementById(`${prefix}_valorCancelado`).value);
+        if (moeda !== 'BRL') {
+            const valorMoeda = parseVal(document.getElementById(`${prefix}_valorCancelado`).value);
             const ptax = parseFloat(document.getElementById(`${prefix}_ptax`).value) || 0;
             const agio = parseVal(document.getElementById(`${prefix}_agio`).value);
             
-            if (valorUSD && ptax) {
+            if (valorMoeda && ptax) {
                 // Aplicar ágio: valor * (1 + agio/100)
-                const valorComAgio = valorUSD * (1 + agio / 100);
+                const valorComAgio = valorMoeda * (1 + agio / 100);
                 const valorBRL = valorComAgio * ptax;
                 
                 const valorBRLGroup = document.getElementById(`${prefix}_valorBRLGroup`);
@@ -655,7 +672,7 @@ const Controller = {
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
             
-            if (!codigoFornecedor || !data || !valorCancelado || !tipo) {
+            if (!codigoFornecedor || !data || !valorCancelado || !tipo || !descricaoTaxa) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
@@ -663,7 +680,7 @@ const Controller = {
             let ptax = null;
             let valorBRL = valorCancelado; // Valor padrão para BRL
             
-            if (moeda === 'USD') {
+            if (moeda !== 'BRL') {
                 ptax = parseFloat(document.getElementById('canc_ptax').value);
                 if (!ptax) {
                     View.showToast('Aguarde o carregamento da cotação PTAX', 'error');
@@ -771,7 +788,7 @@ const Controller = {
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');
             
-            if (!codigoFornecedor || !data || !valorOriginal || !valorCorrigido || !tipo) {
+            if (!codigoFornecedor || !data || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
@@ -780,7 +797,7 @@ const Controller = {
             let valorOriginalBRL = valorOriginal;
             let valorCorrigidoBRL = valorCorrigido;
             
-            if (moeda === 'USD') {
+            if (moeda !== 'BRL') {
                 ptax = parseFloat(document.getElementById('corr_ptax').value);
                 if (!ptax) {
                     View.showToast('Aguarde o carregamento da cotação PTAX', 'error');

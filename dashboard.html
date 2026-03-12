@@ -200,6 +200,13 @@
                         <select id="canc_moeda" name="moeda" required>
                             <option value="BRL">BRL</option>
                             <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="CHF">CHF</option>
+                            <option value="CNY">CNY</option>
+                            <option value="CAD">CAD</option>
+                            <option value="SEK">SEK</option>
+                            <option value="AED">AED</option>
                         </select>
                     </div>
                     
@@ -210,8 +217,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="canc_descricaoTaxa">Descrição da Taxa</label>
-                        <select id="canc_descricaoTaxa" name="descricaoTaxa">
+                        <label for="canc_descricaoTaxa">Descrição da Taxa *</label>
+                        <select id="canc_descricaoTaxa" name="descricaoTaxa" required>
                             <option value="">Selecione...</option>
                             <option value="Ágio Contratual">Ágio Contratual</option>
                             <option value="Spread Bancário">Spread Bancário</option>
@@ -230,9 +237,10 @@
                     </div>
                     
                     <div class="form-group" id="canc_ptaxGroup" style="display: none;">
-                        <label for="canc_ptax">PTAX (USD)</label>
+                        <label for="canc_ptax"><span id="canc_ptaxLabel">PTAX</span></label>
                         <input type="number" id="canc_ptax" name="ptax" 
-                               step="0.0001" readonly>
+                               step="0.0001">
+                        <small class="form-help">Preenchido automaticamente. Edite se necessário.</small>
                     </div>
                     
                     <div class="form-group" id="canc_valorBRLGroup" style="display: none;">
@@ -302,6 +310,13 @@
                         <select id="corr_moeda" name="moeda" required>
                             <option value="BRL">BRL</option>
                             <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="CHF">CHF</option>
+                            <option value="CNY">CNY</option>
+                            <option value="CAD">CAD</option>
+                            <option value="SEK">SEK</option>
+                            <option value="AED">AED</option>
                         </select>
                     </div>
                     
@@ -312,8 +327,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_descricaoTaxa">Descrição da Taxa</label>
-                        <select id="corr_descricaoTaxa" name="descricaoTaxa">
+                        <label for="corr_descricaoTaxa">Descrição da Taxa *</label>
+                        <select id="corr_descricaoTaxa" name="descricaoTaxa" required>
                             <option value="">Selecione...</option>
                             <option value="Ágio Contratual">Ágio Contratual</option>
                             <option value="Spread Bancário">Spread Bancário</option>
@@ -327,9 +342,10 @@
                     </div>
                     
                     <div class="form-group" id="corr_ptaxGroup" style="display: none;">
-                        <label for="corr_ptax">PTAX (USD)</label>
+                        <label for="corr_ptax"><span id="corr_ptaxLabel">PTAX</span></label>
                         <input type="number" id="corr_ptax" name="ptax" 
-                               step="0.0001" readonly>
+                               step="0.0001">
+                        <small class="form-help">Preenchido automaticamente. Edite se necessário.</small>
                     </div>
                     
                     <div class="form-group">
