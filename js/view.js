@@ -72,7 +72,7 @@ const View = {
         if (economias.length === 0) {
             container.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 40px;">
+                    <td colspan="10" style="text-align: center; padding: 40px;">
                         <h3>Nenhuma economia cadastrada</h3>
                         <p>Clique em "Nova Economia" para começar</p>
                     </td>
@@ -113,6 +113,7 @@ const View = {
                     <td>${economia.tipoEconomia || 'Correção'}</td>
                     <td>${economia.tipo || '-'}</td>
                     <td title="${economia.codigoFornecedor || ''}">${economia.nomeFornecedor || economia.codigoFornecedor || '-'}</td>
+                    <td>${economia.modalServico || '-'}</td>
                     <td>${economia.userName || '-'}</td>
                     <td>${Model.formatCurrency(valorExibir)}</td>
                     <td>${moeda}</td>
@@ -520,6 +521,11 @@ const View = {
             if (nomeDisplay) nomeDisplay.textContent = '';
             if (nomeHidden) nomeHidden.value = '';
             if (agioHint) agioHint.textContent = '';
+            // Resetar modal de serviço
+            const cancModalGroup = document.getElementById('canc_modalServicoGroup');
+            const cancModalSelect = document.getElementById('canc_modalServico');
+            if (cancModalGroup) cancModalGroup.style.display = 'none';
+            if (cancModalSelect) { cancModalSelect.innerHTML = '<option value="">Selecione o fornecedor primeiro...</option>'; cancModalSelect.disabled = false; }
             modal.style.display = 'flex';
         }
     },
@@ -552,6 +558,11 @@ const View = {
             if (nomeDisplay) nomeDisplay.textContent = '';
             if (nomeHidden) nomeHidden.value = '';
             if (agioHint) agioHint.textContent = '';
+            // Resetar modal de serviço
+            const corrModalGroup = document.getElementById('corr_modalServicoGroup');
+            const corrModalSelect = document.getElementById('corr_modalServico');
+            if (corrModalGroup) corrModalGroup.style.display = 'none';
+            if (corrModalSelect) { corrModalSelect.innerHTML = '<option value="">Selecione o fornecedor primeiro...</option>'; corrModalSelect.disabled = false; }
             modal.style.display = 'flex';
         }
     },
@@ -607,6 +618,8 @@ const View = {
         document.getElementById('detalhePTAX').textContent = economia.ptax ? economia.ptax.toFixed(4) : '-';
         document.getElementById('detalheAgio').textContent = economia.agio ? `${economia.agio}%` : '0%';
         document.getElementById('detalheTipoEconomia').textContent = economia.tipoEconomia || '-';
+        const detalheModalServico = document.getElementById('detalheModalServico');
+        if (detalheModalServico) detalheModalServico.textContent = economia.modalServico || '-';
         
         // Usar valorEconomiaBRL para o header de detalhes
         let valorBRLExibir = 0;

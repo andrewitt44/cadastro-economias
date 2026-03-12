@@ -59,6 +59,7 @@ const Model = {
             descricao: row.descricao || '',
             status: row.status,
             observacoes: row.observacoes || '',
+            modalServico: row.modal_servico || '',
             dataCriacao: row.data_criacao,
             dataAprovacao: row.data_aprovacao,
             arquivos: row._arquivos || []
@@ -70,6 +71,42 @@ const Model = {
     /** Cache local de fornecedores para autocomplete rápido */
     _fornecedoresCache: null,
     _fornecedoresCacheTime: 0,
+
+    /** Nomes dos modais de serviço */
+    MODAL_NAMES: {1: 'Aéreo', 2: 'Marítimo', 3: 'Rodoviário', 4: 'Ferroviário'},
+
+    /** Mapeamento estático: código fornecedor → códigos de modal (fallback) */
+    MODAIS_MAP: {
+        '52598':[1,2],'15152':[1,2,3,4],'15821':[2],'12757':[3],'16627':[1],'131048':[1],
+        '59497':[1,2,3],'13815':[3],'34218':[3],'57876':[3],'16662':[1],'85103':[1,2,3],
+        '28065':[1,3],'84957':[3],'110394':[3],'121904':[2,3,4],'26100':[2,3,4],
+        '13251':[3],'105243':[1,3],'51876':[1,2,3,4],'41828':[1,2,3],'44946':[1],
+        '97225':[3],'26798':[1,2,3,4],'32814':[3],'18366':[2,3],'50079':[3],
+        '97513':[1,2,3,4],'87298':[1,2],'15306':[3],'80139':[2],'29260':[1,2,3],
+        '40932':[1,2],'63349':[1,2,3],'95066':[1],'75770':[3],'80978':[1],
+        '13041':[1,3],'26859':[1,2,3],'48965':[1,2,3],'108000':[1,2],'60170':[1,2,3,4],
+        '138520':[3],'49440':[1,2,3],'39656':[2],'11382':[1],'93868':[3],
+        '15292':[1,2,3],'75558':[1,2,3],'117133':[1,2,3],'122737':[1,2,3],
+        '15206':[2],'115817':[3],'15252':[1,2],'105305':[2,3],'98598':[1,2,3,4],
+        '58668':[1,2,3],'55289':[1,2],'24355':[2,3],'15207':[2],'102190':[3],
+        '15107':[1,2,3,4],'51360':[1,2],'91053':[3],'138589':[3],'117047':[2],
+        '26353':[1,2,3,4],'116735':[1,2,3],'29224':[1,2,3,4],'55577':[3],'97348':[3],
+        '30051':[1,2,3],'104381':[3],'115821':[1,2],'26675':[1,2,3,4],'64914':[1,2],
+        '74149':[3],'118898':[1],'16658':[2],'81966':[2],'63485':[2],
+        '139642':[1,2,3],'100385':[1,2],'102270':[1,2,3,4],'26219':[1,2],
+        '138867':[2],'19532':[1],'109403':[2],'129011':[2],'137105':[1,2,3],
+        '39506':[1,2,3],'101676':[1,2,3],'55001':[1,2,3],'16726':[1,2],
+        '48185':[1,2,3],'137199':[3],'128969':[1,2],'15187':[1,2]
+    },
+
+    /**
+     * Obter modais de serviço para um código de fornecedor (fallback estático)
+     */
+    getModaisForCodigo(codigo) {
+        const codigos = this.MODAIS_MAP[String(codigo)];
+        if (!codigos || codigos.length === 0) return [];
+        return codigos.map(c => ({codigo: c, nome: this.MODAL_NAMES[c]}));
+    },
 
     /**
      * Obter todos os fornecedores (com cache de 5 min)
@@ -136,7 +173,7 @@ const Model = {
         };
 
         const headers = [
-            'Operação', 'Modal', 'Código Fornecedor', 'Nome Fornecedor',
+            'Operação', 'Modal', 'Código Fornecedor', 'Nome Fornecedor', 'Modal Serviço',
             'Auditor', 'Data', 'Moeda', 'PTAX', 'Ágio (%)', 'Descrição Taxa',
             'Valor Original', 'Valor Corrigido',
             'Valor Original BRL', 'Valor Corrigido BRL', 'Valor Economia', 'Valor Economia BRL',
@@ -156,6 +193,7 @@ const Model = {
                 e.tipo,
                 e.codigoFornecedor,
                 e.nomeFornecedor || '',
+                e.modalServico || '',
                 e.userName,
                 e.data || '',
                 e.moeda,
@@ -198,6 +236,7 @@ const Model = {
             modal: e.tipo,
             codigo_fornecedor: e.codigoFornecedor,
             nome_fornecedor: e.nomeFornecedor || '',
+            modal_servico: e.modalServico || '',
             auditor: e.userName,
             data: e.data,
             moeda: e.moeda,
@@ -480,6 +519,7 @@ const Model = {
             valor_economia: valorCancelado,
             valor_economia_brl: valorBRL,
             tipo: economiaData.tipo,
+            modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
             status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
             data_aprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,
@@ -549,6 +589,7 @@ const Model = {
             valor_cancelado: 0,
             valor_brl: 0,
             tipo: economiaData.tipo,
+            modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
             status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
             data_aprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,

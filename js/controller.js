@@ -438,11 +438,56 @@ const Controller = {
             if (agioHint) agioHint.textContent = `Ágio padrão do fornecedor: ${fornecedor.agio}%`;
         }
 
+        // Atualizar dropdown de modal de serviço
+        const modais = this._getModaisForFornecedor(fornecedor.codigo);
+        this._updateModalDropdown(prefix, modais);
+
         // Recalcular se necessário
         if (prefix === 'canc') {
             this.calculateConversion(prefix);
         } else {
             this.handleValorChange(prefix);
+        }
+    },
+
+    /**
+     * Obter modais disponíveis para um fornecedor (DB cache + fallback estático)
+     */
+    _getModaisForFornecedor(codigo) {
+        const fornecedores = Model._fornecedoresCache || [];
+        const forn = fornecedores.find(f => f.codigo === String(codigo));
+        if (forn && forn.modais_servico && Array.isArray(forn.modais_servico) && forn.modais_servico.length > 0) {
+            return forn.modais_servico;
+        }
+        return Model.getModaisForCodigo(codigo);
+    },
+
+    /**
+     * Atualizar dropdown de modal de serviço baseado nos modais disponíveis
+     */
+    _updateModalDropdown(prefix, modais) {
+        const select = document.getElementById(`${prefix}_modalServico`);
+        const group = document.getElementById(`${prefix}_modalServicoGroup`);
+        if (!select || !group) return;
+
+        select.innerHTML = '';
+
+        if (!modais || modais.length === 0) {
+            group.style.display = 'none';
+            select.removeAttribute('required');
+            return;
+        }
+
+        group.style.display = 'block';
+        select.setAttribute('required', 'required');
+
+        if (modais.length === 1) {
+            select.innerHTML = `<option value="${modais[0].nome}" selected>${modais[0].nome}</option>`;
+            select.disabled = true;
+        } else {
+            select.innerHTML = '<option value="">Selecione o modal...</option>' +
+                modais.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
+            select.disabled = false;
         }
     },
     
@@ -667,6 +712,7 @@ const Controller = {
             const agio = parseVal(document.getElementById('canc_agio').value);
             const valorCancelado = parseVal(document.getElementById('canc_valorCancelado').value);
             const tipo = document.getElementById('canc_tipo').value;
+            const modalServico = document.getElementById('canc_modalServico')?.value || '';
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
             
@@ -732,6 +778,7 @@ const Controller = {
                 codigoFornecedor,
                 nomeFornecedor,
                 descricaoTaxa,
+                modalServico,
                 data,
                 moeda,
                 ptax,
@@ -783,6 +830,7 @@ const Controller = {
             const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
             const valorCorrigido = parseVal(document.getElementById('corr_valorCorrigido').value);
             const tipo = document.getElementById('corr_tipo').value;
+            const modalServico = document.getElementById('corr_modalServico')?.value || '';
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');
             
@@ -846,6 +894,7 @@ const Controller = {
                 codigoFornecedor,
                 nomeFornecedor,
                 descricaoTaxa,
+                modalServico,
                 data,
                 moeda,
                 ptax,
