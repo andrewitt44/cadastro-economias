@@ -457,8 +457,6 @@ const Controller = {
         'CHF': 'CHF',
         'CAD': 'CAD',
         'SEK': 'SEK',
-        'CNY': 'CNY',
-        'AED': 'AED'
     },
 
     async fetchPTAX(date, moeda = 'USD') {
