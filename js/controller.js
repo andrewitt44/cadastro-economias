@@ -215,14 +215,15 @@ const Controller = {
         if (formCancelamento) {
             formCancelamento.addEventListener('submit', (e) => this.handleCancelamentoSubmit(e));
 
-            const cancDataInput = document.getElementById('canc_data');
-            if (cancDataInput) {
-                cancDataInput.setAttribute('max', todayISO);
+            const cancDataPTAXInput = document.getElementById('canc_dataPTAX');
+            if (cancDataPTAXInput) {
+                cancDataPTAXInput.setAttribute('max', todayISO);
             }
             
             // Event listeners para moeda e data (Cancelamento)
             document.getElementById('canc_moeda').addEventListener('change', () => this.handleMoedaChange('canc'));
-            document.getElementById('canc_data').addEventListener('change', () => this.handleDataChange('canc'));
+            document.getElementById('canc_data').addEventListener('change', () => this.handleDataPagamentoChange('canc'));
+            document.getElementById('canc_dataPTAX')?.addEventListener('change', () => this.handleDataChange('canc'));
             document.getElementById('canc_agio').addEventListener('input', () => this.calculateConversion('canc'));
             document.getElementById('canc_valorCancelado').addEventListener('input', () => this.calculateConversion('canc'));
             document.getElementById('canc_ptax').addEventListener('input', () => this.calculateConversion('canc'));
@@ -242,9 +243,9 @@ const Controller = {
         if (formCorrecao) {
             formCorrecao.addEventListener('submit', (e) => this.handleCorrecaoSubmit(e));
 
-            const corrDataInput = document.getElementById('corr_data');
-            if (corrDataInput) {
-                corrDataInput.setAttribute('max', todayISO);
+            const corrDataPTAXInput = document.getElementById('corr_dataPTAX');
+            if (corrDataPTAXInput) {
+                corrDataPTAXInput.setAttribute('max', todayISO);
             }
             
             // Calcular economia automaticamente
@@ -257,7 +258,8 @@ const Controller = {
             
             // Event listeners para moeda e data (Correção)
             document.getElementById('corr_moeda').addEventListener('change', () => this.handleMoedaChange('corr'));
-            document.getElementById('corr_data').addEventListener('change', () => this.handleDataChange('corr'));
+            document.getElementById('corr_data').addEventListener('change', () => this.handleDataPagamentoChange('corr'));
+            document.getElementById('corr_dataPTAX')?.addEventListener('change', () => this.handleDataChange('corr'));
             document.getElementById('corr_agio').addEventListener('input', () => this.handleValorChange('corr'));
             document.getElementById('corr_ptax').addEventListener('input', () => this.handleValorChange('corr'));
         }
@@ -585,8 +587,11 @@ const Controller = {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
         const agioGroup = document.getElementById(`${prefix}_agioGroup`);
         const ptaxGroup = document.getElementById(`${prefix}_ptaxGroup`);
+        const dataPTAXGroup = document.getElementById(`${prefix}_dataPTAXGroup`);
         const moedaLabel = document.getElementById(`${prefix}_moedaLabel`);
         const ptaxLabel = document.getElementById(`${prefix}_ptaxLabel`);
+        const dataPagamento = document.getElementById(`${prefix}_data`)?.value || '';
+        const dataPTAXInput = document.getElementById(`${prefix}_dataPTAX`);
         const isForeign = moeda !== 'BRL';
         
         if (prefix === 'corr') {
@@ -608,17 +613,23 @@ const Controller = {
         if (isForeign) {
             agioGroup.style.display = 'block';
             ptaxGroup.style.display = 'block';
+            if (dataPTAXGroup) dataPTAXGroup.style.display = 'block';
+            if (dataPTAXInput) dataPTAXInput.required = true;
             if (moedaLabel) moedaLabel.textContent = `Valor Cancelado (${moeda})`;
             if (ptaxLabel) ptaxLabel.textContent = `PTAX (${moeda})`;
             
-            // Buscar PTAX se data já estiver preenchida
-            const data = document.getElementById(`${prefix}_data`).value;
-            if (data) {
+            // Buscar PTAX se data PTAX já estiver preenchida
+            if (dataPTAXInput && dataPTAXInput.value) {
                 await this.handleDataChange(prefix);
             }
         } else {
             agioGroup.style.display = 'none';
             ptaxGroup.style.display = 'none';
+            if (dataPTAXGroup) dataPTAXGroup.style.display = 'none';
+            if (dataPTAXInput) {
+                dataPTAXInput.required = false;
+                dataPTAXInput.value = '';
+            }
             if (moedaLabel) moedaLabel.textContent = 'Valor Cancelado (BRL)';
             
             // Limpar PTAX
@@ -635,16 +646,29 @@ const Controller = {
     },
     
     /**
+     * Handler para mudança da data de pagamento
+     */
+    async handleDataPagamentoChange(prefix) {
+        const dataPagamentoInput = document.getElementById(`${prefix}_data`);
+        const moeda = document.getElementById(`${prefix}_moeda`).value;
+
+        if (moeda !== 'BRL') {
+            await this.handleDataChange(prefix);
+        }
+    },
+
+    /**
      * Handler para mudança de data
      */
     async handleDataChange(prefix) {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
-        const data = document.getElementById(`${prefix}_data`).value;
+        const data = document.getElementById(`${prefix}_dataPTAX`)?.value || '';
         const codigoFornecedor = document.getElementById(`${prefix}_codigoFornecedor`)?.value || '';
 
         if (this.isFutureDate(data)) {
-            View.showToast('Data futura não é permitida.', 'error');
-            document.getElementById(`${prefix}_data`).value = '';
+            View.showToast('Data PTAX futura não é permitida.', 'error');
+            const dataPTAXInput = document.getElementById(`${prefix}_dataPTAX`);
+            if (dataPTAXInput) dataPTAXInput.value = '';
             const ptaxInput = document.getElementById(`${prefix}_ptax`);
             if (ptaxInput) ptaxInput.value = '';
             return;
@@ -764,7 +788,8 @@ const Controller = {
             const codigoFornecedor = document.getElementById('canc_codigoFornecedor').value;
             const nomeFornecedor = document.getElementById('canc_nomeFornecedor').value || '';
             const descricaoTaxa = document.getElementById('canc_descricaoTaxa').value || '';
-            const data = document.getElementById('canc_data').value;
+            const dataPagamento = document.getElementById('canc_data').value;
+            const dataPTAX = document.getElementById('canc_dataPTAX')?.value || '';
             const moeda = document.getElementById('canc_moeda').value;
             const agio = parseVal(document.getElementById('canc_agio').value);
             const valorCancelado = parseVal(document.getElementById('canc_valorCancelado').value);
@@ -773,13 +798,8 @@ const Controller = {
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
             
-            if (!codigoFornecedor || !data || !valorCancelado || !tipo || !descricaoTaxa) {
+            if (!codigoFornecedor || !dataPagamento || !valorCancelado || !tipo || !descricaoTaxa) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
-                return;
-            }
-
-            if (this.isFutureDate(data)) {
-                View.showToast('Data futura não é permitida para cadastro.', 'error');
                 return;
             }
             
@@ -787,6 +807,14 @@ const Controller = {
             let valorBRL = valorCancelado; // Valor padrão para BRL
             
             if (moeda !== 'BRL') {
+                if (!dataPTAX) {
+                    View.showToast('Preencha a Data PTAX para moeda estrangeira.', 'error');
+                    return;
+                }
+                if (this.isFutureDate(dataPTAX)) {
+                    View.showToast('Data PTAX futura não é permitida para cadastro.', 'error');
+                    return;
+                }
                 ptax = parseFloat(document.getElementById('canc_ptax').value);
                 if (!ptax) {
                     View.showToast('Aguarde o carregamento da cotação PTAX', 'error');
@@ -841,7 +869,9 @@ const Controller = {
                 nomeFornecedor,
                 descricaoTaxa,
                 modalServico,
-                data,
+                data: dataPagamento,
+                dataPagamento,
+                dataPTAX,
                 moeda,
                 ptax,
                 agio,
@@ -886,7 +916,8 @@ const Controller = {
             const codigoFornecedor = document.getElementById('corr_codigoFornecedor').value;
             const nomeFornecedor = document.getElementById('corr_nomeFornecedor').value || '';
             const descricaoTaxa = document.getElementById('corr_descricaoTaxa').value || '';
-            const data = document.getElementById('corr_data').value;
+            const dataPagamento = document.getElementById('corr_data').value;
+            const dataPTAX = document.getElementById('corr_dataPTAX')?.value || '';
             const moeda = document.getElementById('corr_moeda').value;
             const agio = parseVal(document.getElementById('corr_agio').value);
             const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
@@ -896,13 +927,8 @@ const Controller = {
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');
             
-            if (!codigoFornecedor || !data || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa) {
+            if (!codigoFornecedor || !dataPagamento || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
-                return;
-            }
-
-            if (this.isFutureDate(data)) {
-                View.showToast('Data futura não é permitida para cadastro.', 'error');
                 return;
             }
             
@@ -911,6 +937,14 @@ const Controller = {
             let valorCorrigidoBRL = valorCorrigido;
             
             if (moeda !== 'BRL') {
+                if (!dataPTAX) {
+                    View.showToast('Preencha a Data PTAX para moeda estrangeira.', 'error');
+                    return;
+                }
+                if (this.isFutureDate(dataPTAX)) {
+                    View.showToast('Data PTAX futura não é permitida para cadastro.', 'error');
+                    return;
+                }
                 ptax = parseFloat(document.getElementById('corr_ptax').value);
                 if (!ptax) {
                     View.showToast('Aguarde o carregamento da cotação PTAX', 'error');
@@ -962,7 +996,9 @@ const Controller = {
                 nomeFornecedor,
                 descricaoTaxa,
                 modalServico,
-                data,
+                data: dataPagamento,
+                dataPagamento,
+                dataPTAX,
                 moeda,
                 ptax,
                 agio,

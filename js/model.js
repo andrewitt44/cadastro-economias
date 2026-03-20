@@ -44,6 +44,7 @@ const Model = {
             nomeFornecedor: row.nome_fornecedor || '',
             descricaoTaxa: row.descricao_taxa || '',
             data: row.data,
+            dataPagamento: row.data_pagamento || row.data,
             moeda: row.moeda || 'BRL',
             ptax: row.ptax ? parseFloat(row.ptax) : null,
             agio: row.agio ? parseFloat(row.agio) : 0,
@@ -501,6 +502,9 @@ const Model = {
             return { success: false, message: 'Valor cancelado deve ser maior que zero' };
         }
 
+        // Regra temporária: aprovar automaticamente BID e Cotação.
+        const aprovaAutomatico = economiaData.tipo === 'BID' || economiaData.tipo === 'Cotação';
+
         const registro = {
             user_id: currentSession.id,
             user_name: currentSession.name,
@@ -508,7 +512,8 @@ const Model = {
             codigo_fornecedor: economiaData.codigoFornecedor || '',
             nome_fornecedor: economiaData.nomeFornecedor || '',
             descricao_taxa: economiaData.descricaoTaxa || '',
-            data: economiaData.data,
+            data: economiaData.dataPagamento || economiaData.data,
+            data_pagamento: economiaData.dataPagamento || economiaData.data,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
             agio: economiaData.agio || 0,
@@ -521,8 +526,8 @@ const Model = {
             tipo: economiaData.tipo,
             modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
-            status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
-            data_aprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,
+            status: aprovaAutomatico ? 'Aprovado' : 'Pendente',
+            data_aprovacao: aprovaAutomatico ? new Date().toISOString() : null,
             observacoes: ''
         };
 
@@ -534,6 +539,9 @@ const Model = {
 
         if (error) {
             console.error('Erro ao salvar cancelamento:', error);
+            if (String(error.message || '').toLowerCase().includes('data_pagamento')) {
+                return { success: false, message: 'A coluna data_pagamento ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
+            }
             return { success: false, message: 'Erro ao salvar: ' + error.message };
         }
 
@@ -569,6 +577,9 @@ const Model = {
             return { success: false, message: 'Valor da economia não pode ser negativo' };
         }
 
+        // Regra temporária: aprovar automaticamente BID e Cotação.
+        const aprovaAutomatico = economiaData.tipo === 'BID' || economiaData.tipo === 'Cotação';
+
         const registro = {
             user_id: currentSession.id,
             user_name: currentSession.name,
@@ -576,7 +587,8 @@ const Model = {
             codigo_fornecedor: economiaData.codigoFornecedor || '',
             nome_fornecedor: economiaData.nomeFornecedor || '',
             descricao_taxa: economiaData.descricaoTaxa || '',
-            data: economiaData.data,
+            data: economiaData.dataPagamento || economiaData.data,
+            data_pagamento: economiaData.dataPagamento || economiaData.data,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
             agio: economiaData.agio || 0,
@@ -591,8 +603,8 @@ const Model = {
             tipo: economiaData.tipo,
             modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
-            status: economiaData.tipo === 'BID' ? 'Aprovado' : 'Pendente',
-            data_aprovacao: economiaData.tipo === 'BID' ? new Date().toISOString() : null,
+            status: aprovaAutomatico ? 'Aprovado' : 'Pendente',
+            data_aprovacao: aprovaAutomatico ? new Date().toISOString() : null,
             observacoes: ''
         };
 
@@ -604,6 +616,9 @@ const Model = {
 
         if (error) {
             console.error('Erro ao salvar correção:', error);
+            if (String(error.message || '').toLowerCase().includes('data_pagamento')) {
+                return { success: false, message: 'A coluna data_pagamento ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
+            }
             return { success: false, message: 'Erro ao salvar: ' + error.message };
         }
 

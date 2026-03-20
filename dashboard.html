@@ -199,8 +199,13 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="canc_data">Data *</label>
+                        <label for="canc_data">Data de Pagamento *</label>
                         <input type="date" id="canc_data" name="data" required>
+                    </div>
+
+                    <div class="form-group" id="canc_dataPTAXGroup" style="display: none;">
+                        <label for="canc_dataPTAX">Data PTAX *</label>
+                        <input type="date" id="canc_dataPTAX" name="dataPTAX">
                     </div>
                     
                     <div class="form-group">
@@ -296,7 +301,7 @@
             <div class="modal-body">
                 <form id="formCorrecao">
                     <div class="form-group fornecedor-autocomplete-wrapper">
-                        <label for="corr_codigoFornecedor">Fornecedor (código ou nome) *</label>
+                        <label for="corr_codigoFornecedor">Fornecedor (código ou nome)</label>
                         <input type="text" id="corr_codigoFornecedor" name="codigoFornecedor" 
                                placeholder="Digite código ou nome do fornecedor..." required autocomplete="off">
                         <div class="autocomplete-dropdown" id="corr_fornecedorDropdown"></div>
@@ -307,19 +312,24 @@
                     </div>
                     
                     <div class="form-group" id="corr_modalServicoGroup" style="display: none;">
-                        <label for="corr_modalServico">Modal de Serviço *</label>
+                        <label for="corr_modalServico">Modal de Serviço</label>
                         <select id="corr_modalServico" name="modalServico">
                             <option value="">Selecione o fornecedor primeiro...</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_data">Data *</label>
+                        <label for="corr_data">Data de Pagamento</label>
                         <input type="date" id="corr_data" name="data" required>
+                    </div>
+
+                    <div class="form-group" id="corr_dataPTAXGroup" style="display: none;">
+                        <label for="corr_dataPTAX">Data PTAX</label>
+                        <input type="date" id="corr_dataPTAX" name="dataPTAX">
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_moeda">Moeda *</label>
+                        <label for="corr_moeda">Moeda</label>
                         <select id="corr_moeda" name="moeda" required>
                             <option value="BRL">BRL</option>
                             <option value="USD">USD</option>
@@ -338,7 +348,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_descricaoTaxa">Descrição da Taxa *</label>
+                        <label for="corr_descricaoTaxa">Descrição da Taxa</label>
                         <select id="corr_descricaoTaxa" name="descricaoTaxa" required>
                             <option value="">Selecione...</option>
                             <option value="Ágio Contratual">Ágio Contratual</option>
@@ -360,7 +370,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_valorOriginal"><span id="corr_moedaLabelOriginal">Valor Original (BRL)</span> *</label>
+                        <label for="corr_valorOriginal"><span id="corr_moedaLabelOriginal">Valor Original (BRL)</span></label>
                         <input type="text" inputmode="decimal" id="corr_valorOriginal" name="valorOriginal" required>
                     </div>
                     
@@ -377,7 +387,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_valorCorrigido"><span id="corr_moedaLabelCorrigido">Valor Corrigido (BRL)</span> *</label>
+                        <label for="corr_valorCorrigido"><span id="corr_moedaLabelCorrigido">Valor Corrigido (BRL)</span></label>
                         <input type="text" inputmode="decimal" id="corr_valorCorrigido" name="valorCorrigido" required>
                     </div>
                     
@@ -388,7 +398,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_tipo">Tipo *</label>
+                        <label for="corr_tipo">Tipo</label>
                         <select id="corr_tipo" name="tipo" required>
                             <option value="">Selecione...</option>
                             <option value="BID">BID</option>
@@ -402,7 +412,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="corr_arquivo">Arquivos de Prova (PDF, PNG, JPG) *</label>
+                        <label for="corr_arquivo">Arquivos de Prova (PDF, PNG, JPG)</label>
                         <input type="file" id="corr_arquivo" name="arquivo" 
                                accept=".pdf,.png,.jpg,.jpeg" multiple required>
                         <small class="form-help">Tamanho máximo: 50MB por arquivo.</small>
