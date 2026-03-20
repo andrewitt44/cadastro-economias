@@ -12,6 +12,15 @@ function parseVal(v) {
 const Controller = {
     _currentUser: null,
 
+    isFutureDate(dateStr) {
+        if (!dateStr) return false;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const selectedDate = new Date(year, month - 1, day);
+        const today = new Date();
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        return selectedDate > todayStart;
+    },
+
     /**
      * Inicializar autenticação via Supabase
      * Retorna o usuário autenticado ou redireciona para login
@@ -150,6 +159,8 @@ const Controller = {
      * Configurar event listeners
      */
     setupEventListeners() {
+        const todayISO = new Date().toISOString().split('T')[0];
+
         // Logout
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
@@ -203,6 +214,11 @@ const Controller = {
         const formCancelamento = document.getElementById('formCancelamento');
         if (formCancelamento) {
             formCancelamento.addEventListener('submit', (e) => this.handleCancelamentoSubmit(e));
+
+            const cancDataInput = document.getElementById('canc_data');
+            if (cancDataInput) {
+                cancDataInput.setAttribute('max', todayISO);
+            }
             
             // Event listeners para moeda e data (Cancelamento)
             document.getElementById('canc_moeda').addEventListener('change', () => this.handleMoedaChange('canc'));
@@ -225,6 +241,11 @@ const Controller = {
         const formCorrecao = document.getElementById('formCorrecao');
         if (formCorrecao) {
             formCorrecao.addEventListener('submit', (e) => this.handleCorrecaoSubmit(e));
+
+            const corrDataInput = document.getElementById('corr_data');
+            if (corrDataInput) {
+                corrDataInput.setAttribute('max', todayISO);
+            }
             
             // Calcular economia automaticamente
             document.getElementById('corr_valorOriginal').addEventListener('input', () => this.handleDescontoCalculation());
@@ -504,21 +525,48 @@ const Controller = {
         'SEK': 'SEK',
     },
 
-    async fetchPTAX(date, moeda = 'USD') {
+    /**
+     * Regra de referência da PTAX:
+     * usa a menor data entre a data selecionada e ontem.
+     */
+    getPTAXReferenceDate(date) {
+        const [year, month, day] = date.split('-').map(Number);
+        const selectedDate = new Date(year, month - 1, day);
+
+        const today = new Date();
+        const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        return selectedDate > yesterday ? yesterday : selectedDate;
+    },
+
+    async fetchPTAX(date, moeda = 'USD', codigoFornecedor = '') {
         try {
             const bacenCodigo = this._bacenMoedaMap[moeda] || moeda;
+            const referenceDate = this.getPTAXReferenceDate(date);
             
             // Formatar data para API do BACEN (MM-DD-YYYY)
-            const [year, month, day] = date.split('-');
+            const year = referenceDate.getFullYear();
+            const month = String(referenceDate.getMonth() + 1).padStart(2, '0');
+            const day = String(referenceDate.getDate()).padStart(2, '0');
             const formattedDate = `${month}-${day}-${year}`;
             
             const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${encodeURIComponent(bacenCodigo)}'&@dataCotacao='${formattedDate}'&$format=json`;
             
             const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Falha na API PTAX (${response.status})`);
+            }
             const data = await response.json();
             
-            if (data.value && data.value.length > 0) {
-                return data.value[0].cotacaoVenda;
+            if (Array.isArray(data.value) && data.value.length > 0) {
+                // Usa a última cotação disponível do dia (não assume índice fixo).
+                const ultimaCotacao = data.value[data.value.length - 1];
+                const usaCotacaoCompra = String(codigoFornecedor) === '50079' || String(codigoFornecedor) === '134262';
+                const cotacao = usaCotacaoCompra
+                    ? (ultimaCotacao.cotacaoCompra ?? ultimaCotacao.cotacaoVenda)
+                    : (ultimaCotacao.cotacaoVenda ?? ultimaCotacao.cotacaoCompra);
+                return cotacao ? Number(cotacao) : null;
             } else {
                 View.showToast(`Cotação PTAX não encontrada para ${moeda} nesta data. Você pode digitar o valor manualmente.`, 'warning');
                 return null;
@@ -592,9 +640,18 @@ const Controller = {
     async handleDataChange(prefix) {
         const moeda = document.getElementById(`${prefix}_moeda`).value;
         const data = document.getElementById(`${prefix}_data`).value;
+        const codigoFornecedor = document.getElementById(`${prefix}_codigoFornecedor`)?.value || '';
+
+        if (this.isFutureDate(data)) {
+            View.showToast('Data futura não é permitida.', 'error');
+            document.getElementById(`${prefix}_data`).value = '';
+            const ptaxInput = document.getElementById(`${prefix}_ptax`);
+            if (ptaxInput) ptaxInput.value = '';
+            return;
+        }
         
         if (moeda !== 'BRL' && data) {
-            const ptax = await this.fetchPTAX(data, moeda);
+            const ptax = await this.fetchPTAX(data, moeda, codigoFornecedor);
             if (ptax) {
                 document.getElementById(`${prefix}_ptax`).value = ptax.toFixed(4);
                 
@@ -720,6 +777,11 @@ const Controller = {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
+
+            if (this.isFutureDate(data)) {
+                View.showToast('Data futura não é permitida para cadastro.', 'error');
+                return;
+            }
             
             let ptax = null;
             let valorBRL = valorCancelado; // Valor padrão para BRL
@@ -836,6 +898,11 @@ const Controller = {
             
             if (!codigoFornecedor || !data || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+
+            if (this.isFutureDate(data)) {
+                View.showToast('Data futura não é permitida para cadastro.', 'error');
                 return;
             }
             
