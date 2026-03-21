@@ -119,15 +119,16 @@
                     <table id="tabelaEconomias" class="economias-table">
                         <thead>
                             <tr>
-                                <th>Operação</th>
-                                <th>Modal</th>
-                                <th>Fornecedor</th>
-                                <th>Modal Serviço</th>
-                                <th>Auditor</th>
-                                <th>Valor</th>
-                                <th>Moeda</th>
-                                <th>Data</th>
-                                <th>Status</th>
+                                <th class="sortable" data-sort-key="tipoEconomia">Operação</th>
+                                <th class="sortable" data-sort-key="tipo">Modal</th>
+                                <th class="sortable" data-sort-key="fornecedor">Fornecedor</th>
+                                <th class="sortable" data-sort-key="modalServico">Modal Serviço</th>
+                                <th class="sortable" data-sort-key="userName">Auditor</th>
+                                <th class="sortable" data-sort-key="areaResponsavel">Área Responsável</th>
+                                <th class="sortable" data-sort-key="valor">Valor</th>
+                                <th class="sortable" data-sort-key="moeda">Moeda</th>
+                                <th class="sortable" data-sort-key="data">Data PTAX</th>
+                                <th class="sortable" data-sort-key="status">Status</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -268,6 +269,15 @@
                             <option value="Cotação">Cotação</option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label for="canc_areaResponsavel">Área Responsável *</label>
+                        <select id="canc_areaResponsavel" name="areaResponsavel" required>
+                            <option value="">Selecione...</option>
+                            <option value="Auditoria">Auditoria</option>
+                            <option value="Comercial">Comercial</option>
+                        </select>
+                    </div>
                     
                     <div class="form-group">
                         <label for="canc_descricao">Descrição</label>
@@ -403,6 +413,15 @@
                             <option value="">Selecione...</option>
                             <option value="BID">BID</option>
                             <option value="Cotação">Cotação</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="corr_areaResponsavel">Área Responsável *</label>
+                        <select id="corr_areaResponsavel" name="areaResponsavel" required>
+                            <option value="">Selecione...</option>
+                            <option value="Auditoria">Auditoria</option>
+                            <option value="Comercial">Comercial</option>
                         </select>
                     </div>
                     

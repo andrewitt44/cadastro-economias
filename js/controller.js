@@ -794,11 +794,12 @@ const Controller = {
             const agio = parseVal(document.getElementById('canc_agio').value);
             const valorCancelado = parseVal(document.getElementById('canc_valorCancelado').value);
             const tipo = document.getElementById('canc_tipo').value;
+            const areaResponsavel = document.getElementById('canc_areaResponsavel').value;
             const modalServico = document.getElementById('canc_modalServico')?.value || '';
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
             
-            if (!codigoFornecedor || !dataPagamento || !valorCancelado || !tipo || !descricaoTaxa) {
+            if (!codigoFornecedor || !dataPagamento || !valorCancelado || !tipo || !descricaoTaxa || !areaResponsavel) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
@@ -878,6 +879,7 @@ const Controller = {
                 valorCancelado: valorCancelado,
                 valorBRL: valorBRL,
                 tipo,
+                areaResponsavel,
                 descricao,
                 arquivos
             };
@@ -923,11 +925,12 @@ const Controller = {
             const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
             const valorCorrigido = parseVal(document.getElementById('corr_valorCorrigido').value);
             const tipo = document.getElementById('corr_tipo').value;
+            const areaResponsavel = document.getElementById('corr_areaResponsavel').value;
             const modalServico = document.getElementById('corr_modalServico')?.value || '';
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');
             
-            if (!codigoFornecedor || !dataPagamento || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa) {
+            if (!codigoFornecedor || !dataPagamento || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa || !areaResponsavel) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
                 return;
             }
@@ -1007,6 +1010,7 @@ const Controller = {
                 valorOriginalBRL: valorOriginalBRL,
                 valorCorrigidoBRL: valorCorrigidoBRL,
                 tipo,
+                areaResponsavel,
                 descricao,
                 arquivos
             };

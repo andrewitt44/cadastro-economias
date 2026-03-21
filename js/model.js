@@ -44,7 +44,7 @@ const Model = {
             nomeFornecedor: row.nome_fornecedor || '',
             descricaoTaxa: row.descricao_taxa || '',
             data: row.data,
-            dataPagamento: row.data_pagamento || row.data,
+            dataPagamento: row.data_pagamento || null,
             moeda: row.moeda || 'BRL',
             ptax: row.ptax ? parseFloat(row.ptax) : null,
             agio: row.agio ? parseFloat(row.agio) : 0,
@@ -57,6 +57,7 @@ const Model = {
             valorEconomia: parseFloat(row.valor_economia) || 0,
             valorEconomiaBRL: parseFloat(row.valor_economia_brl) || 0,
             tipo: row.tipo,
+            areaResponsavel: row.area_responsavel || '',
             descricao: row.descricao || '',
             status: row.status,
             observacoes: row.observacoes || '',
@@ -524,6 +525,7 @@ const Model = {
             valor_economia: valorCancelado,
             valor_economia_brl: valorBRL,
             tipo: economiaData.tipo,
+            area_responsavel: economiaData.areaResponsavel || '',
             modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
             status: aprovaAutomatico ? 'Aprovado' : 'Pendente',
@@ -539,6 +541,9 @@ const Model = {
 
         if (error) {
             console.error('Erro ao salvar cancelamento:', error);
+            if (String(error.message || '').toLowerCase().includes('area_responsavel')) {
+                return { success: false, message: 'A coluna area_responsavel ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
+            }
             if (String(error.message || '').toLowerCase().includes('data_pagamento')) {
                 return { success: false, message: 'A coluna data_pagamento ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
             }
@@ -601,6 +606,7 @@ const Model = {
             valor_cancelado: 0,
             valor_brl: 0,
             tipo: economiaData.tipo,
+            area_responsavel: economiaData.areaResponsavel || '',
             modal_servico: economiaData.modalServico || '',
             descricao: economiaData.descricao || '',
             status: aprovaAutomatico ? 'Aprovado' : 'Pendente',
@@ -616,6 +622,9 @@ const Model = {
 
         if (error) {
             console.error('Erro ao salvar correção:', error);
+            if (String(error.message || '').toLowerCase().includes('area_responsavel')) {
+                return { success: false, message: 'A coluna area_responsavel ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
+            }
             if (String(error.message || '').toLowerCase().includes('data_pagamento')) {
                 return { success: false, message: 'A coluna data_pagamento ainda não existe no banco. Atualize a tabela economias para incluir esse campo.' };
             }

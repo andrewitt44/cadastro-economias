@@ -506,6 +506,17 @@ body {
     color: var(--gray-500);
     white-space: nowrap;
 }
+.economias-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+.economias-table th.sortable:hover {
+    color: var(--primary);
+}
+.economias-table th.sortable-active {
+    color: var(--primary-700);
+}
 .economias-table tbody tr {
     border-bottom: 1px solid var(--gray-100);
     transition: background-color 0.15s;

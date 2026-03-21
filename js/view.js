@@ -7,6 +7,133 @@ const View = {
     currentPage: 1,
     itemsPerPage: 35,
     allEconomias: [],
+    sortKey: null,
+    sortDirection: null,
+    _sortHeadersInitialized: false,
+
+    /**
+     * Configurar ordenação por clique nos cabeçalhos do dashboard
+     */
+    setupDashboardSorting() {
+        if (this._sortHeadersInitialized) return;
+
+        const table = document.getElementById('tabelaEconomias');
+        if (!table) return;
+
+        const headers = table.querySelectorAll('th.sortable[data-sort-key]');
+        headers.forEach((header) => {
+            const sortKey = header.dataset.sortKey;
+            if (!sortKey) return;
+
+            if (!header.dataset.label) {
+                header.dataset.label = header.textContent.trim();
+            }
+
+            header.addEventListener('click', () => this.toggleSort(sortKey));
+        });
+
+        this._sortHeadersInitialized = true;
+        this.updateSortIndicators();
+    },
+
+    /**
+     * Alternar estado da ordenação: asc -> desc -> padrão
+     */
+    toggleSort(key) {
+        if (this.sortKey !== key) {
+            this.sortKey = key;
+            this.sortDirection = 'asc';
+        } else if (this.sortDirection === 'asc') {
+            this.sortDirection = 'desc';
+        } else {
+            this.sortKey = null;
+            this.sortDirection = null;
+        }
+
+        this.currentPage = 1;
+        Controller.loadEconomias();
+    },
+
+    /**
+     * Atualizar rótulos dos cabeçalhos para refletir a ordenação ativa
+     */
+    updateSortIndicators() {
+        const table = document.getElementById('tabelaEconomias');
+        if (!table) return;
+
+        const headers = table.querySelectorAll('th.sortable[data-sort-key]');
+        headers.forEach((header) => {
+            const label = header.dataset.label || header.textContent.trim();
+            const key = header.dataset.sortKey;
+
+            header.classList.remove('sortable-active');
+            if (!this.sortKey || this.sortKey !== key || !this.sortDirection) {
+                header.textContent = label;
+                return;
+            }
+
+            header.classList.add('sortable-active');
+            const suffix = this.sortDirection === 'asc' ? ' (asc)' : ' (desc)';
+            header.textContent = `${label}${suffix}`;
+        });
+    },
+
+    /**
+     * Obter valor usado na ordenação por coluna
+     */
+    getSortValue(economia, key) {
+        switch (key) {
+            case 'tipoEconomia':
+                return (economia.tipoEconomia || '').toLowerCase();
+            case 'tipo':
+                return (economia.tipo || '').toLowerCase();
+            case 'fornecedor':
+                return (economia.nomeFornecedor || economia.codigoFornecedor || '').toLowerCase();
+            case 'modalServico':
+                return (economia.modalServico || '').toLowerCase();
+            case 'userName':
+                return (economia.userName || '').toLowerCase();
+            case 'areaResponsavel':
+                return (economia.areaResponsavel || '').toLowerCase();
+            case 'valor':
+                if (economia.tipoEconomia === 'Cancelamento') {
+                    return parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorBRL) || parseFloat(economia.valorCancelado) || 0;
+                }
+                return parseFloat(economia.valorEconomiaBRL) || parseFloat(economia.valorEconomia) || 0;
+            case 'moeda':
+                return (economia.moeda || 'BRL').toLowerCase();
+            case 'data':
+                return new Date(economia.data || economia.dataCriacao || 0).getTime();
+            case 'status':
+                return (economia.status || '').toLowerCase();
+            default:
+                return '';
+        }
+    },
+
+    /**
+     * Ordenar economias conforme coluna/direção atual
+     */
+    getSortedEconomias(economias) {
+        const sorted = [...economias];
+
+        // Estado padrão: mais recentes primeiro (data de criação)
+        if (!this.sortKey || !this.sortDirection) {
+            return sorted.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
+        }
+
+        const direction = this.sortDirection === 'asc' ? 1 : -1;
+        return sorted.sort((a, b) => {
+            const aVal = this.getSortValue(a, this.sortKey);
+            const bVal = this.getSortValue(b, this.sortKey);
+
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return (aVal - bVal) * direction;
+            }
+
+            return String(aVal).localeCompare(String(bVal), 'pt-BR') * direction;
+        });
+    },
     
     /**
      * Renderizar informações do usuário no header (com avatar)
@@ -65,14 +192,17 @@ const View = {
         const container = document.getElementById('listaEconomias');
         
         if (!container) return;
+
+        this.setupDashboardSorting();
+        this.updateSortIndicators();
         
         // Armazenar todas as economias
-        this.allEconomias = economias;
+        this.allEconomias = [...economias];
         
         if (economias.length === 0) {
             container.innerHTML = `
                 <tr>
-                    <td colspan="10" style="text-align: center; padding: 40px;">
+                    <td colspan="11" style="text-align: center; padding: 40px;">
                         <h3>Nenhuma economia cadastrada</h3>
                         <p>Clique em "Nova Economia" para começar</p>
                     </td>
@@ -80,14 +210,13 @@ const View = {
             `;
             return;
         }
-        
-        // Ordenar por data de criação (mais recentes primeiro)
-        economias.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
+
+        const sortedEconomias = this.getSortedEconomias(this.allEconomias);
         
         // Calcular paginação
         const startIndex = (this.currentPage - 1) * this.itemsPerPage;
         const endIndex = startIndex + this.itemsPerPage;
-        const paginatedEconomias = economias.slice(startIndex, endIndex);
+        const paginatedEconomias = sortedEconomias.slice(startIndex, endIndex);
         
         container.innerHTML = paginatedEconomias.map(economia => {
             const statusClass = economia.status === 'Aprovado' ? 'badge-aprovado' :
@@ -115,6 +244,7 @@ const View = {
                     <td title="${economia.codigoFornecedor || ''}">${economia.nomeFornecedor || economia.codigoFornecedor || '-'}</td>
                     <td>${economia.modalServico || '-'}</td>
                     <td>${economia.userName || '-'}</td>
+                    <td>${economia.areaResponsavel || '-'}</td>
                     <td>${Model.formatCurrency(valorExibir)}</td>
                     <td>${moeda}</td>
                     <td>${Model.formatDate(economia.data || economia.dataCriacao)}</td>
@@ -620,6 +750,12 @@ const View = {
         document.getElementById('detalheTipoEconomia').textContent = economia.tipoEconomia || '-';
         const detalheModalServico = document.getElementById('detalheModalServico');
         if (detalheModalServico) detalheModalServico.textContent = economia.modalServico || '-';
+        const detalheDataCadastro = document.getElementById('detalheDataCadastro');
+        if (detalheDataCadastro) detalheDataCadastro.textContent = Model.formatDateTime(economia.dataCriacao);
+        const detalheDataPagamento = document.getElementById('detalheDataPagamento');
+        if (detalheDataPagamento) detalheDataPagamento.textContent = Model.formatDate(economia.dataPagamento);
+        const detalheAreaResponsavel = document.getElementById('detalheAreaResponsavel');
+        if (detalheAreaResponsavel) detalheAreaResponsavel.textContent = economia.areaResponsavel || '-';
         
         // Usar valorEconomiaBRL para o header de detalhes
         let valorBRLExibir = 0;
