@@ -43,8 +43,8 @@ const Model = {
             codigoFornecedor: row.codigo_fornecedor || '',
             nomeFornecedor: row.nome_fornecedor || '',
             descricaoTaxa: row.descricao_taxa || '',
-            data: row.data,
-            dataPagamento: row.data_pagamento || null,
+            data: row.data || null,
+            dataPagamento: row.data_pagamento || row.data || null,
             moeda: row.moeda || 'BRL',
             ptax: row.ptax ? parseFloat(row.ptax) : null,
             agio: row.agio ? parseFloat(row.agio) : 0,
@@ -176,10 +176,10 @@ const Model = {
 
         const headers = [
             'Operação', 'Modal', 'Código Fornecedor', 'Nome Fornecedor', 'Modal Serviço',
-            'Auditor', 'Data', 'Moeda', 'PTAX', 'Ágio (%)', 'Descrição Taxa',
+            'Auditor', 'Área Responsável', 'Data PTAX', 'Data Pagamento', 'Moeda', 'PTAX', 'Ágio (%)', 'Descrição Taxa',
             'Valor Original', 'Valor Corrigido',
             'Valor Original BRL', 'Valor Corrigido BRL', 'Valor Economia', 'Valor Economia BRL',
-            'Status', 'Descrição', 'Observações', 'Data Criação', 'Data Aprovação'
+            'Status', 'Descrição', 'Data Criação'
         ];
 
         const rows = economias.map(e => {
@@ -197,7 +197,9 @@ const Model = {
                 e.nomeFornecedor || '',
                 e.modalServico || '',
                 e.userName,
+                e.areaResponsavel || '',
                 e.data || '',
+                e.dataPagamento || '',
                 e.moeda,
                 fmtNum(e.ptax),
                 fmtNum(e.agio || 0),
@@ -210,9 +212,9 @@ const Model = {
                 fmtNum(valorEconomiaBRLCSV),
                 e.status,
                 e.descricao,
-                e.observacoes,
-                e.dataCriacao ? new Date(e.dataCriacao).toLocaleString('pt-BR') : '',
-                e.dataAprovacao ? new Date(e.dataAprovacao).toLocaleString('pt-BR') : ''
+                // e.observacoes,
+                e.dataCriacao ? new Date(e.dataCriacao).toLocaleString('pt-BR') : ''
+                // e.dataAprovacao ? new Date(e.dataAprovacao).toLocaleString('pt-BR') : ''
             ];
         });
 
@@ -233,32 +235,38 @@ const Model = {
      * Exportar economias para JSON (Power BI import direto)
      */
     exportToJSON(economias, filename = 'economias') {
-        const exportData = economias.map(e => ({
-            operacao: e.tipoEconomia,
-            modal: e.tipo,
-            codigo_fornecedor: e.codigoFornecedor,
-            nome_fornecedor: e.nomeFornecedor || '',
-            modal_servico: e.modalServico || '',
-            auditor: e.userName,
-            data: e.data,
-            moeda: e.moeda,
-            ptax: e.ptax,
-            agio_pct: e.agio,
-            descricao_taxa: e.descricaoTaxa || '',
-            valor_cancelado: e.valorCancelado,
-            valor_brl: e.valorBRL,
-            valor_original: e.valorOriginal,
-            valor_corrigido: e.valorCorrigido,
-            valor_original_brl: e.valorOriginalBRL,
-            valor_corrigido_brl: e.valorCorrigidoBRL,
-            valor_economia: e.valorEconomia,
-            valor_economia_brl: e.valorEconomiaBRL,
-            status: e.status,
-            descricao: e.descricao,
-            observacoes: e.observacoes,
-            data_criacao: e.dataCriacao,
-            data_aprovacao: e.dataAprovacao
-        }));
+        const exportData = economias.map(e => {
+            // Mesma regra do CSV para cancelamento.
+            const valorOrig = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : e.valorOriginal;
+            const valorOrigBRL = e.tipoEconomia === 'Cancelamento' ? e.valorBRL : e.valorOriginalBRL;
+            const valorEconomia = e.tipoEconomia === 'Cancelamento' ? e.valorCancelado : (e.valorOriginal - e.valorCorrigido);
+            const valorEconomiaBRL = e.tipoEconomia === 'Cancelamento' ? e.valorBRL : (e.valorOriginalBRL - e.valorCorrigidoBRL);
+
+            return {
+                operacao: e.tipoEconomia,
+                modal: e.tipo,
+                codigo_fornecedor: e.codigoFornecedor,
+                nome_fornecedor: e.nomeFornecedor || '',
+                modal_servico: e.modalServico || '',
+                auditor: e.userName,
+                area_responsavel: e.areaResponsavel || '',
+                data_ptax: e.data || '',
+                data_pagamento: e.dataPagamento || '',
+                moeda: e.moeda,
+                ptax: e.ptax,
+                agio_pct: e.agio || 0,
+                descricao_taxa: e.descricaoTaxa || '',
+                valor_original: valorOrig,
+                valor_corrigido: e.tipoEconomia === 'Cancelamento' ? 0 : e.valorCorrigido,
+                valor_original_brl: valorOrigBRL,
+                valor_corrigido_brl: e.tipoEconomia === 'Cancelamento' ? 0 : e.valorCorrigidoBRL,
+                valor_economia: valorEconomia,
+                valor_economia_brl: valorEconomiaBRL,
+                status: e.status,
+                descricao: e.descricao,
+                data_criacao: e.dataCriacao
+            };
+        });
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -513,8 +521,8 @@ const Model = {
             codigo_fornecedor: economiaData.codigoFornecedor || '',
             nome_fornecedor: economiaData.nomeFornecedor || '',
             descricao_taxa: economiaData.descricaoTaxa || '',
-            data: economiaData.dataPagamento || economiaData.data,
-            data_pagamento: economiaData.dataPagamento || economiaData.data,
+            data: economiaData.dataPTAX || economiaData.data || economiaData.dataPagamento || null,
+            data_pagamento: economiaData.dataPagamento || economiaData.data || null,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
             agio: economiaData.agio || 0,
@@ -592,8 +600,8 @@ const Model = {
             codigo_fornecedor: economiaData.codigoFornecedor || '',
             nome_fornecedor: economiaData.nomeFornecedor || '',
             descricao_taxa: economiaData.descricaoTaxa || '',
-            data: economiaData.dataPagamento || economiaData.data,
-            data_pagamento: economiaData.dataPagamento || economiaData.data,
+            data: economiaData.dataPTAX || economiaData.data || economiaData.dataPagamento || null,
+            data_pagamento: economiaData.dataPagamento || economiaData.data || null,
             moeda: economiaData.moeda || 'BRL',
             ptax: economiaData.ptax || null,
             agio: economiaData.agio || 0,
@@ -841,7 +849,17 @@ const Model = {
      */
     formatDate(isoDate) {
         if (!isoDate) return '-';
-        const date = new Date(isoDate);
+
+        // Para datas sem horário (YYYY-MM-DD), evitar new Date() para não deslocar por fuso.
+        const raw = String(isoDate).trim();
+        const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateOnlyMatch) {
+            const [, year, month, day] = dateOnlyMatch;
+            return `${day}/${month}/${year}`;
+        }
+
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return raw;
         return date.toLocaleDateString('pt-BR', {
             day: '2-digit',
             month: '2-digit',

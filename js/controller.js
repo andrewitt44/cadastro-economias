@@ -12,6 +12,10 @@ function parseVal(v) {
 const Controller = {
     _currentUser: null,
 
+    _isBlank(value) {
+        return value == null || String(value).trim() === '';
+    },
+
     isFutureDate(dateStr) {
         if (!dateStr) return false;
         const [year, month, day] = dateStr.split('-').map(Number);
@@ -529,17 +533,29 @@ const Controller = {
 
     /**
      * Regra de referência da PTAX:
-     * usa a menor data entre a data selecionada e ontem.
+     * usa a menor data entre a data selecionada e ontem,
+     * ajustando para o último dia útil (sexta, se cair no fim de semana).
      */
     getPTAXReferenceDate(date) {
         const [year, month, day] = date.split('-').map(Number);
         const selectedDate = new Date(year, month - 1, day);
 
         const today = new Date();
-        const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        todayStart.setHours(0, 0, 0, 0);
+
+        const yesterday = new Date(todayStart);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        return selectedDate > yesterday ? yesterday : selectedDate;
+        const reference = selectedDate > yesterday ? yesterday : selectedDate;
+        reference.setHours(0, 0, 0, 0);
+
+        // Se cair em sábado/domingo, volta até sexta.
+        while (reference.getDay() === 0 || reference.getDay() === 6) {
+            reference.setDate(reference.getDate() - 1);
+        }
+
+        return reference;
     },
 
     async fetchPTAX(date, moeda = 'USD', codigoFornecedor = '') {
@@ -553,26 +569,54 @@ const Controller = {
             const day = String(referenceDate.getDate()).padStart(2, '0');
             const formattedDate = `${month}-${day}-${year}`;
             
-            const url = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${encodeURIComponent(bacenCodigo)}'&@dataCotacao='${formattedDate}'&$format=json`;
-            
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Falha na API PTAX (${response.status})`);
-            }
-            const data = await response.json();
-            
-            if (Array.isArray(data.value) && data.value.length > 0) {
-                // Usa a última cotação disponível do dia (não assume índice fixo).
-                const ultimaCotacao = data.value[data.value.length - 1];
+            const dayUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaDia(moeda=@moeda,dataCotacao=@dataCotacao)?@moeda='${bacenCodigo}'&@dataCotacao='${formattedDate}'&$format=json`;
+
+            const pickCotacao = (cotacoes) => {
+                if (!Array.isArray(cotacoes) || cotacoes.length === 0) return null;
+                const ultimaCotacao = cotacoes[cotacoes.length - 1];
                 const usaCotacaoCompra = String(codigoFornecedor) === '50079' || String(codigoFornecedor) === '134262';
                 const cotacao = usaCotacaoCompra
                     ? (ultimaCotacao.cotacaoCompra ?? ultimaCotacao.cotacaoVenda)
                     : (ultimaCotacao.cotacaoVenda ?? ultimaCotacao.cotacaoCompra);
                 return cotacao ? Number(cotacao) : null;
-            } else {
-                View.showToast(`Cotação PTAX não encontrada para ${moeda} nesta data. Você pode digitar o valor manualmente.`, 'warning');
-                return null;
+            };
+
+            const response = await fetch(dayUrl);
+            if (!response.ok) {
+                throw new Error(`Falha na API PTAX (${response.status})`);
             }
+
+            const data = await response.json();
+            const cotacaoDia = pickCotacao(data?.value);
+            if (cotacaoDia) {
+                return cotacaoDia;
+            }
+
+            // Fallback: busca a última cotação disponível em uma janela recente
+            // (cobre fins de semana e feriados sem depender de uma data exata).
+            const startDate = new Date(referenceDate);
+            startDate.setDate(startDate.getDate() - 10);
+
+            const startYear = startDate.getFullYear();
+            const startMonth = String(startDate.getMonth() + 1).padStart(2, '0');
+            const startDay = String(startDate.getDate()).padStart(2, '0');
+            const formattedStartDate = `${startMonth}-${startDay}-${startYear}`;
+
+            const periodUrl = `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoMoedaPeriodo(moeda=@moeda,dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@moeda='${bacenCodigo}'&@dataInicial='${formattedStartDate}'&@dataFinalCotacao='${formattedDate}'&$top=1&$orderby=dataHoraCotacao%20desc&$format=json`;
+
+            const periodResponse = await fetch(periodUrl);
+            if (!periodResponse.ok) {
+                throw new Error(`Falha na API PTAX (fallback ${periodResponse.status})`);
+            }
+
+            const periodData = await periodResponse.json();
+            const cotacaoFallback = pickCotacao(periodData?.value);
+            if (cotacaoFallback) {
+                return cotacaoFallback;
+            }
+
+            View.showToast(`Cotação PTAX não encontrada para ${moeda} nesta data. Você pode digitar o valor manualmente.`, 'warning');
+            return null;
         } catch (error) {
             console.error('Erro ao buscar PTAX:', error);
             View.showToast('Erro ao buscar cotação PTAX. Você pode digitar o valor manualmente.', 'warning');
@@ -785,22 +829,35 @@ const Controller = {
         submitBtn.textContent = 'Salvando...';
         
         try {
-            const codigoFornecedor = document.getElementById('canc_codigoFornecedor').value;
+            const codigoFornecedor = document.getElementById('canc_codigoFornecedor').value.trim();
             const nomeFornecedor = document.getElementById('canc_nomeFornecedor').value || '';
-            const descricaoTaxa = document.getElementById('canc_descricaoTaxa').value || '';
+            const descricaoTaxa = document.getElementById('canc_descricaoTaxa').value.trim();
             const dataPagamento = document.getElementById('canc_data').value;
             const dataPTAX = document.getElementById('canc_dataPTAX')?.value || '';
             const moeda = document.getElementById('canc_moeda').value;
+            const valorCanceladoRaw = document.getElementById('canc_valorCancelado').value;
             const agio = parseVal(document.getElementById('canc_agio').value);
-            const valorCancelado = parseVal(document.getElementById('canc_valorCancelado').value);
+            const valorCancelado = parseVal(valorCanceladoRaw);
             const tipo = document.getElementById('canc_tipo').value;
             const areaResponsavel = document.getElementById('canc_areaResponsavel').value;
             const modalServico = document.getElementById('canc_modalServico')?.value || '';
             const descricao = document.getElementById('canc_descricao').value;
             const arquivoInput = document.getElementById('canc_arquivo');
             
-            if (!codigoFornecedor || !dataPagamento || !valorCancelado || !tipo || !descricaoTaxa || !areaResponsavel) {
+            if (
+                this._isBlank(codigoFornecedor) ||
+                this._isBlank(dataPagamento) ||
+                this._isBlank(valorCanceladoRaw) ||
+                this._isBlank(tipo) ||
+                this._isBlank(descricaoTaxa) ||
+                this._isBlank(areaResponsavel)
+            ) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+
+            if (valorCancelado <= 0) {
+                View.showToast('Valor cancelado deve ser maior que zero', 'error');
                 return;
             }
             
@@ -915,23 +972,38 @@ const Controller = {
         submitBtn.textContent = 'Salvando...';
         
         try {
-            const codigoFornecedor = document.getElementById('corr_codigoFornecedor').value;
+            const codigoFornecedor = document.getElementById('corr_codigoFornecedor').value.trim();
             const nomeFornecedor = document.getElementById('corr_nomeFornecedor').value || '';
-            const descricaoTaxa = document.getElementById('corr_descricaoTaxa').value || '';
+            const descricaoTaxa = document.getElementById('corr_descricaoTaxa').value.trim();
             const dataPagamento = document.getElementById('corr_data').value;
             const dataPTAX = document.getElementById('corr_dataPTAX')?.value || '';
             const moeda = document.getElementById('corr_moeda').value;
+            const valorOriginalRaw = document.getElementById('corr_valorOriginal').value;
+            const valorCorrigidoRaw = document.getElementById('corr_valorCorrigido').value;
             const agio = parseVal(document.getElementById('corr_agio').value);
-            const valorOriginal = parseVal(document.getElementById('corr_valorOriginal').value);
-            const valorCorrigido = parseVal(document.getElementById('corr_valorCorrigido').value);
+            const valorOriginal = parseVal(valorOriginalRaw);
+            const valorCorrigido = parseVal(valorCorrigidoRaw);
             const tipo = document.getElementById('corr_tipo').value;
             const areaResponsavel = document.getElementById('corr_areaResponsavel').value;
             const modalServico = document.getElementById('corr_modalServico')?.value || '';
             const descricao = document.getElementById('corr_descricao').value;
             const arquivoInput = document.getElementById('corr_arquivo');
             
-            if (!codigoFornecedor || !dataPagamento || !valorOriginal || !valorCorrigido || !tipo || !descricaoTaxa || !areaResponsavel) {
+            if (
+                this._isBlank(codigoFornecedor) ||
+                this._isBlank(dataPagamento) ||
+                this._isBlank(valorOriginalRaw) ||
+                this._isBlank(valorCorrigidoRaw) ||
+                this._isBlank(tipo) ||
+                this._isBlank(descricaoTaxa) ||
+                this._isBlank(areaResponsavel)
+            ) {
                 View.showToast('Preencha todos os campos obrigatórios', 'error');
+                return;
+            }
+
+            if (valorOriginal <= 0 || valorCorrigido <= 0) {
+                View.showToast('Valor original e valor corrigido devem ser maiores que zero', 'error');
                 return;
             }
             

@@ -247,7 +247,7 @@ const View = {
                     <td>${economia.areaResponsavel || '-'}</td>
                     <td>${Model.formatCurrency(valorExibir)}</td>
                     <td>${moeda}</td>
-                    <td>${Model.formatDate(economia.data || economia.dataCriacao)}</td>
+                    <td>${Model.formatDate(economia.dataCriacao)}</td>
                     <td><span class="badge-status ${statusClass}">${economia.status}</span></td>
                     <td>
                         <button class="btn-icon" onclick="window.location.href='detalhes.html?id=${economia.id}'" title="Ver detalhes">
@@ -743,7 +743,7 @@ const View = {
             : economia.codigoFornecedor || '-';
         document.getElementById('detalheFornecedor').textContent = fornecedorDisplay;
         document.getElementById('detalheAuditor').textContent = economia.userName || '-';
-        document.getElementById('detalheData').textContent = Model.formatDate(economia.data || economia.dataCriacao);
+        document.getElementById('detalheData').textContent = Model.formatDate(economia.data || economia.dataPagamento || economia.dataCriacao);
         document.getElementById('detalheMoeda').textContent = economia.moeda || 'BRL';
         document.getElementById('detalhePTAX').textContent = economia.ptax ? economia.ptax.toFixed(4) : '-';
         document.getElementById('detalheAgio').textContent = economia.agio ? `${economia.agio}%` : '0%';
@@ -753,7 +753,7 @@ const View = {
         const detalheDataCadastro = document.getElementById('detalheDataCadastro');
         if (detalheDataCadastro) detalheDataCadastro.textContent = Model.formatDateTime(economia.dataCriacao);
         const detalheDataPagamento = document.getElementById('detalheDataPagamento');
-        if (detalheDataPagamento) detalheDataPagamento.textContent = Model.formatDate(economia.dataPagamento);
+        if (detalheDataPagamento) detalheDataPagamento.textContent = Model.formatDate(economia.dataPagamento || economia.data);
         const detalheAreaResponsavel = document.getElementById('detalheAreaResponsavel');
         if (detalheAreaResponsavel) detalheAreaResponsavel.textContent = economia.areaResponsavel || '-';
         

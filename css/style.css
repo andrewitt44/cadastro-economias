@@ -423,12 +423,17 @@ body {
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
+    justify-content: center;
+}
+.actions-bar > #btnNovaEconomia {
+    align-self: flex-end;
 }
 .filters {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    flex: 1;
+    flex: 0 1 auto;
+    justify-content: center;
     align-items: flex-end;
 }
 .filter-group {
@@ -1021,6 +1026,7 @@ body {
     .app-main { padding: 16px; }
     .indicators { grid-template-columns: 1fr; }
     .actions-bar { flex-direction: column; align-items: stretch; }
+    .actions-bar > #btnNovaEconomia { align-self: stretch; }
     .filters { flex-direction: column; }
     .table-container { overflow-x: scroll; }
     .economias-table { min-width: 900px; }
